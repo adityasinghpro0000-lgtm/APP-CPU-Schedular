@@ -23,14 +23,17 @@
     if (!rows.length) {
       const seed = oldProfiles.length ? oldProfiles : [{ ...DEFAULT_PROFILE }];
       for (const item of seed) {
-        const row = await window.AppAPI.createProfile(item.name, item.role || 'Project user');
-        if (item.avatar) await window.AppAPI.updateProfile(row.id, { avatar: item.avatar });
+        await window.AppAPI.createProfile(item.name, item.role || 'Project user');
       }
       const activeIndex = Math.max(0, seed.findIndex(item => item.active));
       rows = await window.AppAPI.listProfiles();
       if (rows[activeIndex]) await window.AppAPI.activateProfile(rows[activeIndex].id);
       rows = await window.AppAPI.listProfiles();
     }
+    const cachedProfileFor = row => oldProfiles.find(old => String(old.id) === String(row.id))
+      || oldProfiles.find(old => String(old.name || '').trim().toLowerCase() === String(row.name || '').trim().toLowerCase());
+    // Photos are browser-local; never load or sync the database avatar field.
+    rows = rows.map(row => ({ ...row, avatar: cachedProfileFor(row)?.avatar || '' }));
     const scopeMap = {};
     oldProfiles.forEach(old => {
       const match = rows.find(row => row.name.trim().toLowerCase() === String(old.name || '').trim().toLowerCase());
@@ -50,8 +53,8 @@
       let row = rows.find(candidate => String(candidate.id) === String(item.id));
       if (!row && !/^\d+$/.test(String(item.id))) row = rows.find(candidate => candidate.name.toLowerCase() === String(item.name).toLowerCase());
       if (!row) row = await api.createProfile(item.name, item.role || 'Project user');
-      if (row.name !== item.name || row.role !== (item.role || 'Project user') || (row.avatar || '') !== (item.avatar || '')) {
-        row = await api.updateProfile(row.id, { name: item.name, role: item.role || 'Project user', avatar: item.avatar || null });
+      if (row.name !== item.name || row.role !== (item.role || 'Project user')) {
+        row = await api.updateProfile(row.id, { name: item.name, role: item.role || 'Project user' });
       }
       mapped.set(String(item.id), row.id);
       used.add(String(row.id));
@@ -61,6 +64,11 @@
     const active = target.find(item => item.active) || target[0];
     if (active) await api.activateProfile(mapped.get(String(active.id)) || active.id);
     rows = await api.listProfiles();
+    rows = rows.map(row => {
+      const cached = target.find(item => String(mapped.get(String(item.id))) === String(row.id))
+        || target.find(item => String(item.name || '').trim().toLowerCase() === String(row.name || '').trim().toLowerCase());
+      return { ...row, avatar: cached?.avatar || '' };
+    });
     cacheProfiles(rows);
     refreshProfileUI();
   }
@@ -115,6 +123,7 @@
         showProfileStatus('Profile saved in this browser; MySQL sync failed');
       });
     }
+    return profileSyncQueue;
   }
 
   function getInitials(name) {
@@ -344,14 +353,15 @@
     if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
   }
 
-  function setActiveProfile(profileId) {
+  async function setActiveProfile(profileId) {
     const profiles = getProfiles().map(profile => ({ ...profile, active: String(profile.id) === String(profileId) }));
     const activeProfile = profiles.find(profile => profile.active) || profiles[0];
+    if (!activeProfile) return;
     saveProfiles(profiles);
     writeProfile(activeProfile);
-    localStorage.removeItem(`cpu-simulator-active-workspace-${activeProfile.id}`);
+    await profileSyncQueue;
     if (window.location?.pathname?.endsWith('profile.html')) window.location.href = 'workspace.html';
-    else refreshProfileUI();
+    else window.location.reload();
   }
 
   function updateProfile(profileId, updater) {
@@ -415,6 +425,12 @@
     const prefixes = [
       `cpu-simulator-tabs-${profileId}`,
       `cpu-simulator-active-workspace-${profileId}`,
+      `cpu-simulator-logs-${profileId}`,
+      `cpu-simulator-theme-${profileId}`,
+      `cpu-simulator-motion-${profileId}`,
+      `cpu-simulator-text-size-${profileId}`,
+      `cpu-simulator-zoom-${profileId}`,
+      `cpu-simulator-contrast-${profileId}`,
       `cpu-sim-ws-v3-${profileId}-`
     ];
     for (let index = localStorage.length - 1; index >= 0; index--) {
@@ -461,7 +477,7 @@
   }
 
   function clearLogs() {
-    localStorage.removeItem('cpu-simulator-logs');
+    localStorage.removeItem(`cpu-simulator-logs-${getStorageScope()}`);
     if (window.AppAPI) window.AppAPI.clearLogs(readProfile()?.id).catch(error => console.warn('Could not clear MySQL logs:', error));
     const list = document.querySelector('#systemLogList');
     if (list) list.innerHTML = '<li class="system-log-empty">No system activity recorded yet.</li>';

@@ -9,9 +9,15 @@
     contrast: 'cpu-simulator-contrast'
   };
 
+  function storageKey(key) {
+    if (new URLSearchParams(window.location.search).get('demo') === '1') return `${key}-demo`;
+    const profileId = window.ProfileManager?.getStorageScope?.() || 'default';
+    return `${key}-${profileId}`;
+  }
+
   function applyPreferences() {
     const docEl = document.documentElement;
-    const isDark = localStorage.getItem(STORAGE_KEYS.theme) === 'dark';
+    const isDark = localStorage.getItem(storageKey(STORAGE_KEYS.theme)) === 'dark';
     docEl.classList.toggle('dark', isDark);
     docEl.classList.toggle('light', !isDark);
 
@@ -25,7 +31,7 @@
     }
     document.querySelector('#themeColor')?.setAttribute('content', isDark ? '#171918' : '#f4f1ea');
 
-    const textSize = localStorage.getItem(STORAGE_KEYS.textSize) || 'normal';
+    const textSize = localStorage.getItem(storageKey(STORAGE_KEYS.textSize)) || 'normal';
     docEl.classList.toggle('text-small', textSize === 'small');
     docEl.classList.toggle('text-large', textSize === 'large');
     document.querySelectorAll('[data-text-size]').forEach(button => {
@@ -34,13 +40,13 @@
       button.setAttribute('aria-pressed', String(selected));
     });
 
-    const savedZoom = parseFloat(localStorage.getItem(STORAGE_KEYS.zoom) || '1');
+    const savedZoom = parseFloat(localStorage.getItem(storageKey(STORAGE_KEYS.zoom)) || '1');
     const zoom = isNaN(savedZoom) ? 1 : Math.min(1.3, Math.max(0.7, Math.round(savedZoom * 10) / 10));
     document.body.style.zoom = zoom;
     const zoomDisplay = document.querySelector('#zoomValue');
     if (zoomDisplay) zoomDisplay.textContent = `${Math.round(zoom * 100)}%`;
 
-    const contrast = localStorage.getItem(STORAGE_KEYS.contrast) || 'normal';
+    const contrast = localStorage.getItem(storageKey(STORAGE_KEYS.contrast)) || 'normal';
     docEl.classList.toggle('high-contrast', contrast === 'high');
     document.querySelectorAll('[data-contrast]').forEach(button => {
       const selected = button.dataset.contrast === contrast;
@@ -51,9 +57,9 @@
   }
 
   function resetAccessibilityPrefs() {
-    localStorage.setItem(STORAGE_KEYS.textSize, 'normal');
-    localStorage.setItem(STORAGE_KEYS.zoom, '1');
-    localStorage.setItem(STORAGE_KEYS.contrast, 'normal');
+    localStorage.setItem(storageKey(STORAGE_KEYS.textSize), 'normal');
+    localStorage.setItem(storageKey(STORAGE_KEYS.zoom), '1');
+    localStorage.setItem(storageKey(STORAGE_KEYS.contrast), 'normal');
     applyPreferences();
   }
 
@@ -109,27 +115,27 @@
     }
 
     document.querySelectorAll('[data-text-size]').forEach(button => button.addEventListener('click', () => {
-      localStorage.setItem(STORAGE_KEYS.textSize, button.dataset.textSize);
+      localStorage.setItem(storageKey(STORAGE_KEYS.textSize), button.dataset.textSize);
       applyPreferences();
     }));
     document.querySelectorAll('[data-zoom]').forEach(button => button.addEventListener('click', () => {
-      const current = parseFloat(localStorage.getItem(STORAGE_KEYS.zoom) || '1');
+      const current = parseFloat(localStorage.getItem(storageKey(STORAGE_KEYS.zoom)) || '1');
       const delta = button.dataset.zoom === 'increase' ? 0.1 : -0.1;
-      localStorage.setItem(STORAGE_KEYS.zoom, String(Math.min(1.3, Math.max(0.7, Math.round((current + delta) * 10) / 10))));
+      localStorage.setItem(storageKey(STORAGE_KEYS.zoom), String(Math.min(1.3, Math.max(0.7, Math.round((current + delta) * 10) / 10))));
       applyPreferences();
     }));
     document.querySelectorAll('[data-contrast]').forEach(button => button.addEventListener('click', () => {
-      localStorage.setItem(STORAGE_KEYS.contrast, button.dataset.contrast);
+      localStorage.setItem(storageKey(STORAGE_KEYS.contrast), button.dataset.contrast);
       applyPreferences();
     }));
     document.querySelector('#accessibilityReset')?.addEventListener('click', resetAccessibilityPrefs);
     document.querySelector('#themeToggle')?.addEventListener('click', () => {
       const nextDark = !document.documentElement.classList.contains('dark');
-      localStorage.setItem(STORAGE_KEYS.theme, nextDark ? 'dark' : 'light');
+      localStorage.setItem(storageKey(STORAGE_KEYS.theme), nextDark ? 'dark' : 'light');
       applyPreferences();
     });
     window.addEventListener('storage', event => {
-      if (Object.values(STORAGE_KEYS).includes(event.key)) applyPreferences();
+      if (Object.values(STORAGE_KEYS).some(key => event.key?.startsWith(`${key}-`))) applyPreferences();
     });
   }
 

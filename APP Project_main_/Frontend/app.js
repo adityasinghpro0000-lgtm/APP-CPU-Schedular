@@ -53,6 +53,12 @@ function writeStoredValue(key, value) {
   }
 }
 
+function profileSettingKey(key) {
+  if (new URLSearchParams(window.location.search).get('demo') === '1') return `${key}-demo`;
+  const profileId = window.ProfileManager?.getStorageScope?.() || 'default';
+  return `${key}-${profileId}`;
+}
+
 function workspaceStorageKey() {
   if (new URLSearchParams(window.location.search).get('demo') === '1') return `${WSKEY_BASE}-demo`;
   let profileId = 'default';
@@ -67,6 +73,55 @@ function workspaceStorageKey() {
 // DOM
 // ============================================================
 const $  = id => document.getElementById(id);
+function enableTerminalDragging() {
+  const panel = $('programRunOutputPanel');
+  const handle = panel?.querySelector('.terminal-titlebar');
+  if (!panel || !handle) return;
+  panel.querySelector('.terminal-window-actions')?.remove();
+  const screen = panel.querySelector('.terminal-screen');
+  if (screen && !screen.querySelector('.terminal-help')) {
+    const help = document.createElement('div');
+    help.className = 'terminal-help';
+    help.textContent = 'Enter  -  start or resume playback\nAny other key  -  stop playback (focus the prompt first)\nTitle bar  -  drag to move the terminal\nGantt controls  -  step or seek through the run\nOutput  -  process completion log';
+    screen.insertBefore(help, screen.querySelector('.terminal-command-line'));
+    const output = $('programRunOutput');
+    if (output && output.textContent.startsWith('Press Enter')) output.textContent = 'Ready.';
+  }
+  panel.querySelector('.terminal-screen')?.addEventListener('pointerdown', event => {
+    if (event.target.id !== 'terminalCommand') $('terminalCommand')?.focus();
+  });
+
+  let drag = null;
+  handle.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    const rect = panel.getBoundingClientRect();
+    if (panel.parentElement !== document.body) document.body.appendChild(panel);
+    panel.classList.add('is-floating');
+    panel.style.left = `${rect.left + window.scrollX}px`;
+    panel.style.top = `${rect.top + window.scrollY}px`;
+    panel.style.width = `${rect.width}px`;
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+    drag = { pointerId: event.pointerId, dx: event.clientX - rect.left, dy: event.clientY - rect.top };
+    handle.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+
+  handle.addEventListener('pointermove', event => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const maxLeft = Math.max(0, document.documentElement.scrollWidth - panel.offsetWidth);
+    const maxTop = Math.max(0, document.documentElement.scrollHeight - panel.offsetHeight);
+    panel.style.left = `${Math.min(maxLeft, Math.max(0, event.clientX + window.scrollX - drag.dx))}px`;
+    panel.style.top = `${Math.min(maxTop, Math.max(0, event.clientY + window.scrollY - drag.dy))}px`;
+  });
+
+  const stopDragging = event => {
+    if (drag && event.pointerId === drag.pointerId) drag = null;
+  };
+  handle.addEventListener('pointerup', stopDragging);
+  handle.addEventListener('pointercancel', stopDragging);
+}
+enableTerminalDragging();
 const algoSel  = $('algorithm');
 const quantumIn = $('quantum');
 const csIn      = $('contextSwitch');
@@ -127,6 +182,8 @@ function simulate(procs, algo, opts = {}) {
     admittedAt:     p.admittedAt !== undefined ? p.admittedAt : p.arrival,
     policy:         p.policy || null,
     remaining:      p.burst,
+    // Count simulated instruction units executed by this process.
+    programCounter:  0,
     state:          'New',
     responseTime:   null,
     completionTime: null,
@@ -248,6 +305,7 @@ function simulate(procs, algo, opts = {}) {
         p.id,
         p.id === runId && p.state !== 'Terminated' ? 'Running' : p.state,
       ])),
+      programCounters: new Map(pcbs.map(p => [p.id, p.programCounter])),
     });
   }
 
@@ -340,6 +398,7 @@ function simulate(procs, algo, opts = {}) {
 
     // ── Execute 1 tick ────────────────────────────────────
     prevId = current.id;
+    current.programCounter++;
     current.remaining--;
     current.quantumUsed++;
     current.vruntime++;
@@ -402,7 +461,7 @@ function renderTable() {
   tbody.innerHTML = processes.map((p, i) => `
     <tr>
       <td><input class="process-color-input" type="color" value="${p.color || PALETTE[i % PALETTE.length]}" data-index="${i}" data-field="color" aria-label="${p.id} color"></td>
-      <td><div class="process-name-cell"><input class="process-input process-name" type="text" value="${p.id}" data-index="${i}" data-field="id" aria-label="${p.id} name">${p.sourceFile ? `<small class="process-source-file" title="${escapeHTML(p.sourceFile)}">${escapeHTML(p.sourceFile)}</small>` : ''}</div></td>
+      <td><div class="process-name-cell"><input class="process-input process-name" type="text" value="${p.id}" data-index="${i}" data-field="id" aria-label="${p.id} name"${p.sourceFile ? ' readonly title="Program file process names cannot be changed"' : ''}>${p.sourceFile ? `<small class="process-source-file" title="${escapeHTML(p.sourceFile)}">${escapeHTML(p.sourceFile)}</small>` : ''}</div></td>
       <td><input class="process-input"             type="number" value="${p.arrival}"  data-index="${i}" data-field="arrival"  min="0"  aria-label="${p.id} arrival"></td>
       <td><input class="process-input"             type="number" value="${p.burst}"    data-index="${i}" data-field="burst"    min="1"  aria-label="${p.id} burst"></td>
       <td><input class="process-input"             type="number" value="${p.priority}" data-index="${i}" data-field="priority" min="1"  aria-label="${p.id} priority"></td>
@@ -824,7 +883,13 @@ function renderPipeline(snap) {
   const stages = $('pipelineStages');
   const windowEl = $('pipelineWindow');
   const clockEl = $('pipelineClock');
+  const pcEl = $('programCounterReadout');
   if (!stages || !windowEl) return;
+  const monitorReadout = document.querySelector('.monitor-readout');
+  if (pcEl) {
+    pcEl.setAttribute('aria-label', 'Program counter');
+    if (monitorReadout && pcEl.parentElement !== monitorReadout) monitorReadout.appendChild(pcEl);
+  }
   const ready = snap?.readyQueue?.map(item => item.id) || [];
   const running = snap?.running || null;
   const active = running || ready[0] || null;
@@ -840,7 +905,14 @@ function renderPipeline(snap) {
       <span>${label}</span><strong>${pid || '—'}</strong><small>${pid ? meta : 'IDLE'}</small>
     </div>`;
   }).join('');
-  if (clockEl) clockEl.textContent = snap ? `t = ${snap.clock}` : 't = —';
+  if (clockEl) {
+    const pc = snap?.running ? snap.programCounters?.get(snap.running) : null;
+    clockEl.textContent = snap ? `t = ${snap.clock}` : 't = —';
+    if (pcEl) {
+      pcEl.textContent = snap?.running ? `PC · ${snap.running}: ${pc ?? 0}` : 'PC · idle';
+      pcEl.title = 'Simulated program counter: instruction units executed by the running process';
+    }
+  }
 
   const blocks = lastResult?.gantt || [];
   const currentClock = snap?.clock ?? Number.POSITIVE_INFINITY;
@@ -946,7 +1018,13 @@ function renderComparison() {
   const bestTAT  = Math.min(...algs.map(a => compData[a].avgTAT));
   const bestRT   = Math.min(...algs.map(a => compData[a].avgRT));
   const bestUtil = Math.max(...algs.map(a => compData[a].utilization));
-  const maxWT    = Math.max(...algs.map(a => compData[a].avgWT)) || 1;
+  const algoWidth = Math.max('Algorithm'.length, ...algs.map(a => ALGO_META[a].name.length));
+  const waitingTimeText = [
+    'Average Waiting Time (lower = better)',
+    `${'='.repeat(algoWidth)}  ${'='.repeat(8)}`,
+    `${'Algorithm'.padEnd(algoWidth)}  ${'Avg WT'.padStart(8)}`,
+    ...algs.map(a => `${ALGO_META[a].name.padEnd(algoWidth)}  ${compData[a].avgWT.toFixed(2).padStart(8)}`),
+  ].join('\n');
 
   panel.innerHTML = `
     <div class="cmp-table-wrap">
@@ -968,21 +1046,7 @@ function renderComparison() {
         }).join('')}</tbody>
       </table>
     </div>
-    <div class="cmp-bars-section">
-      <p class="cmp-bars-title">Average Waiting Time (lower = better)</p>
-      ${algs.map(a => {
-        const r   = compData[a];
-        const pct = Math.round((r.avgWT / maxWT) * 100);
-        const cur = a === algoSel.value;
-        return `<div class="cmp-bar-row">
-          <span class="cmp-bar-name">${ALGO_META[a].name}</span>
-          <div class="cmp-bar-track">
-            <div class="cmp-bar-fill${r.avgWT <= bestWT + .01 ? ' best' : ''}${cur ? ' current' : ''}" style="width:${Math.max(pct, 2)}%"></div>
-          </div>
-          <span class="cmp-bar-val">${r.avgWT.toFixed(2)}</span>
-        </div>`;
-      }).join('')}
-    </div>`;
+    <pre class="cmp-terminal-output">${escapeHTML(waitingTimeText)}</pre>`;
 }
 
 // ============================================================
@@ -1062,54 +1126,6 @@ function normalizeImportedProcesses(items) {
   });
 }
 
-function addProgramFiles(fileList) {
-  const supportedExtensions = new Set(['.py', '.c', '.cc', '.cpp', '.cxx']);
-  const files = Array.from(fileList || []);
-  const supportedFiles = files.filter(file => supportedExtensions.has(file.name.slice(file.name.lastIndexOf('.')).toLowerCase()));
-  const rejectedFiles = files.filter(file => !supportedExtensions.has(file.name.slice(file.name.lastIndexOf('.')).toLowerCase()));
-
-  if (!supportedFiles.length) {
-    throw new Error('Select at least one Python (.py), C (.c), or C++ (.cc, .cpp, .cxx) source file.');
-  }
-
-  const usedIds = new Set(processes.map(process => process.id.toLowerCase()));
-  const addedProcesses = supportedFiles.map((file, index) => {
-    const sourceStem = file.name.slice(0, file.name.lastIndexOf('.'));
-    const baseId = sourceStem.normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 36) || 'Program';
-    let id = baseId;
-    let suffix = 2;
-    while (usedIds.has(id.toLowerCase())) {
-      const suffixText = `-${suffix++}`;
-      id = `${baseId.slice(0, 40 - suffixText.length)}${suffixText}`;
-    }
-    usedIds.add(id.toLowerCase());
-    const arrival = 0;
-    const burst = 1;
-    return {
-      id,
-      sourceFile: file.name,
-      arrival,
-      burst,
-      priority: 1,
-      deadline: arrival + burst + 10,
-      color: PALETTE[(processes.length + index) % PALETTE.length],
-      state: 'Ready',
-    };
-  });
-
-  processes.push(...addedProcesses);
-  const rejectedMessage = rejectedFiles.length
-    ? ` Skipped unsupported file${rejectedFiles.length === 1 ? '' : 's'}: ${rejectedFiles.map(file => file.name).join(', ')}.`
-    : '';
-  const status = $('programFilesStatus');
-  status.classList.remove('error');
-  status.textContent = `Added ${addedProcesses.length} process${addedProcesses.length === 1 ? '' : 'es'}. Defaults: arrival 0, burst 1, priority 1; edit these in the table.${rejectedMessage}`;
-  addLog(`Added ${addedProcesses.length} process${addedProcesses.length === 1 ? '' : 'es'} from source files`);
-  renderTable();
-  runSim();
-  updateNavCount();
-}
-
 function parseCsv(text) {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
   if (lines.length < 2) throw new Error('CSV needs a header and at least one process');
@@ -1152,6 +1168,11 @@ function runSim() {
     allSnaps    = snapshots;
     snapIdx     = clamp(previousSnapIdx, 0, snapshots.length - 1);
 
+    if (!pcbs.some(process => process.sourceFile)) {
+      $('programRunTitle').textContent = 'Process completion order';
+      $('programRunOutput').textContent = 'Ready.';
+    }
+
     // Keep the editable workload in its default Ready state; playback owns live state changes.
     processes.forEach(process => { process.state = 'Ready'; });
     renderTable();
@@ -1183,6 +1204,32 @@ function stepTo(idx) {
   renderGantt(lastResult?.gantt, snap.clock);
   updateStepProgress();
   renderTable();
+  renderProcessCompletionTerminal(snap);
+}
+
+function renderProcessCompletionTerminal(snap) {
+  const panel = $('programRunOutputPanel');
+  const title = $('programRunTitle');
+  const output = $('programRunOutput');
+  if (!panel || !title || !output) return;
+
+  const completed = (lastResult?.pcbs || [])
+    .filter(process => snap.processStates?.get(process.id) === 'Terminated')
+    .sort((left, right) => left.completionTime - right.completionTime || left.id.localeCompare(right.id));
+  panel.classList.remove('hidden');
+  if (lastResult?.pcbs.some(process => process.sourceFile)) {
+    const report = output.dataset.programReport || output.textContent;
+    const progress = completed.length
+      ? completed.map((process, index) => `${String(index + 1).padStart(2, '0')}  [t=${process.completionTime}]  ${process.id} completed`).join('\n')
+      : `No process has completed yet. Running: ${snap.running || 'none'}.`;
+    title.textContent = `Program output and scheduling progress at t = ${snap.clock}`;
+    output.textContent = `${report}\n\nScheduling progress:\n${progress}`;
+    return;
+  }
+  title.textContent = `Process completion order · t = ${snap.clock}`;
+  output.textContent = completed.length
+    ? completed.map((process, index) => `${String(index + 1).padStart(2, '0')}  [t=${process.completionTime}]  ${process.id} completed`).join('\n')
+    : 'Waiting for the first process to complete...';
 }
 
 function updateStepProgress() {
@@ -1193,6 +1240,7 @@ function updateStepProgress() {
 function play() {
   if (playTimer || !allSnaps.length) return;
   if (snapIdx >= allSnaps.length - 1) stepTo(0);
+  else renderProcessCompletionTerminal(allSnaps[snapIdx]);
   $('playBtn')?.classList.add('hidden');
   $('pauseBtn')?.classList.remove('hidden');
   const spd = Number($('speedSlider')?.value) || 1;
@@ -1214,9 +1262,15 @@ function pause() {
 // ============================================================
 const sysLogs = [];
 function addLog(msg) {
-  sysLogs.unshift({ time: new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }), message: msg });
+  const entry = { time: new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }), message: msg };
+  sysLogs.unshift(entry);
   sysLogs.splice(50);
-  writeStoredValue('cpu-simulator-logs', JSON.stringify(sysLogs));
+  const profileId = window.ProfileManager?.getStorageScope?.() || 'default';
+  const logsKey = `cpu-simulator-logs-${profileId}`;
+  let profileLogs = [];
+  try { profileLogs = JSON.parse(readStoredValue(logsKey) || '[]'); } catch (_) {}
+  profileLogs.unshift(entry);
+  writeStoredValue(logsKey, JSON.stringify(profileLogs.slice(0, 50)));
   if (window.AppAPI) Promise.resolve(window.ProfileManager?.ready).then(() => window.AppAPI.createLog(msg,window.ProfileManager?.readProfile()?.id)).catch(error => console.warn('Could not save system log to MySQL:',error));
   const list = $('systemLogList');
   if (list) list.innerHTML = sysLogs.map(l =>
@@ -1291,7 +1345,7 @@ function restore() {
 // THEME / MOTION / CLOCK
 // ============================================================
 function setTheme(dark) {
-  writeStoredValue('cpu-simulator-theme', dark ? 'dark' : 'light');
+  writeStoredValue(profileSettingKey('cpu-simulator-theme'), dark ? 'dark' : 'light');
   if (window.A11yManager) {
     try { window.A11yManager.applyPreferences(); } catch (error) {
       console.warn('Could not apply saved accessibility preferences:', error);
@@ -1311,7 +1365,7 @@ function setTheme(dark) {
 function setMotion(r) {
   document.documentElement.classList.toggle('reduce-motion', r);
   motionBtn?.setAttribute('aria-pressed', String(r));
-  writeStoredValue('cpu-simulator-motion', r ? 'reduced' : 'full');
+  writeStoredValue(profileSettingKey('cpu-simulator-motion'), r ? 'reduced' : 'full');
 }
 function tickClock() {
   const el = $('sidebarDateTime');
@@ -1328,6 +1382,10 @@ $('processTable').addEventListener('change', e => {
   if (el.dataset.index === undefined) return;
   const p  = processes[+el.dataset.index];
   if (!p) return;
+  if (el.dataset.field === 'id' && p.sourceFile) {
+    el.value = p.id;
+    return;
+  }
   if (el.dataset.field === 'color') p.color = el.value;
   else if (el.dataset.field === 'id') {
     const id = el.value.trim();
@@ -1469,8 +1527,11 @@ function showPcbTooltip(block, event) {
     unsubmitted: 'New', job_pool: 'Waiting', cs: 'Waiting', terminated: 'Terminated',
   };
   const displayState = stateLabels[String(historicalState || '').toLowerCase()] || historicalState || pcb.state;
+  const snapshotPc = allSnaps[snapIdx]?.programCounters?.get(processId);
+  const programCounter = Number.isFinite(snapshotPc) ? snapshotPc : (pcb.programCounter || 0);
   const rows = [
-    ['State', displayState], ['Arrival', `${pcb.arrival} units`], ['Burst', `${pcb.burst} units`],
+    ['State', displayState], ['Program Counter', `${programCounter} instruction units`],
+    ['Arrival', `${pcb.arrival} units`], ['Burst', `${pcb.burst} units`],
     ['Remaining', `${pcb.remaining} units`], ['Priority', pcb.priority],
     ['Deadline', Number.isFinite(pcb.deadline) ? `t = ${pcb.deadline}` : '—'],
     ['Response', pcb.responseTime == null ? '—' : `${pcb.responseTime} units`],
@@ -1517,7 +1578,7 @@ priConvIn.addEventListener('change',  runSim);
 motionBtn?.addEventListener('click', () => setMotion(!document.documentElement.classList.contains('reduce-motion')));
 
 // Playback
-$('playBtn')?.addEventListener('click',     play);
+$('playBtn')?.addEventListener('click',     playOrRunPrograms);
 $('pauseBtn')?.addEventListener('click',    pause);
 $('stepFwdBtn')?.addEventListener('click',  () => { pause(); stepTo(snapIdx + 1); });
 $('stepBwdBtn')?.addEventListener('click',  () => { pause(); stepTo(snapIdx - 1); });
@@ -1570,18 +1631,218 @@ workloadFile?.addEventListener('change', async event => {
   event.target.value = '';
 });
 
+const programDropzone = $('programDropzone');
+const programFileList = $('programFileList');
 const programFilesInput = $('programFilesInput');
-$('programFilesButton')?.addEventListener('click', () => programFilesInput?.click());
+const supportedProgramExtensions = new Set(['.py', '.c', '.cc', '.cpp', '.cxx']);
+let selectedProgramFiles = [];
+let programFilesPrepared = false;
+let programRunInProgress = false;
+let processQueueBeforeProgramSelection = null;
+
+function restoreProcessQueueAfterProgramFailure() {
+  if (!processQueueBeforeProgramSelection) return;
+  processes = processQueueBeforeProgramSelection;
+  processQueueBeforeProgramSelection = null;
+  renderTable();
+  updateNavCount();
+  runSim();
+}
+
+function selectProgramFiles(fileList) {
+  const files = Array.from(fileList || []);
+  const supported = files.filter(file => supportedProgramExtensions.has(file.name.slice(file.name.lastIndexOf('.')).toLowerCase()));
+  const oversized = supported.filter(file => file.size > 256 * 1024);
+  if ((!selectedProgramFiles.length || programFilesPrepared) && processQueueBeforeProgramSelection === null) {
+    processQueueBeforeProgramSelection = processes.map(process => ({ ...process }));
+  }
+  const candidates = [...(programFilesPrepared ? [] : selectedProgramFiles), ...supported]
+    .filter((file, index, all) => all.findIndex(item => item.name === file.name && item.size === file.size && item.lastModified === file.lastModified) === index);
+  const eligible = candidates.filter(file => file.size <= 256 * 1024);
+  selectedProgramFiles = eligible.slice(0, 10);
+  programFilesPrepared = false;
+  programFileList.replaceChildren(...selectedProgramFiles.map(file => {
+    const item = document.createElement('li');
+    item.textContent = file.name;
+    return item;
+  }));
+  const status = $('programFilesStatus');
+  const skipped = files.length - supported.length + oversized.length + Math.max(0, eligible.length - 10);
+  status.classList.toggle('error', !selectedProgramFiles.length || skipped > 0);
+  status.textContent = selectedProgramFiles.length
+    ? `${selectedProgramFiles.length} file${selectedProgramFiles.length === 1 ? '' : 's'} ready${skipped ? `; skipped ${skipped} unsupported, oversized, or excess file${skipped === 1 ? '' : 's'}` : ''}.`
+    : 'Drop or choose .py, .c, .cc, .cpp, or .cxx files up to 256 KB each.';
+  if (selectedProgramFiles.length) {
+    processes = [];
+    status.textContent = `${selectedProgramFiles.length} source file${selectedProgramFiles.length === 1 ? '' : 's'} ready. Press Gantt Play to run and measure ${selectedProgramFiles.length === 1 ? 'it' : 'them'}.${skipped ? ` Skipped ${skipped} unsupported, oversized, or excess file${skipped === 1 ? '' : 's'}.` : ''}`;
+    renderTable();
+    updateNavCount();
+    runSim();
+  } else {
+    restoreProcessQueueAfterProgramFailure();
+    status.classList.toggle('error', !selectedProgramFiles.length || skipped > 0);
+  }
+  if (selectedProgramFiles.length) $('programRunOutputPanel')?.classList.add('hidden');
+  else $('programRunOutputPanel')?.classList.remove('hidden');
+}
+
+programDropzone?.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    programFilesInput?.click();
+  }
+});
 programFilesInput?.addEventListener('change', event => {
-  const input = event.currentTarget;
-  try {
-    addProgramFiles(input.files);
-  } catch (error) {
+  selectProgramFiles(event.currentTarget.files);
+  event.currentTarget.value = '';
+});
+
+programDropzone?.addEventListener('dragenter', event => {
+  event.preventDefault();
+  programDropzone.classList.add('drag-over');
+});
+programDropzone?.addEventListener('dragover', event => {
+  event.preventDefault();
+  programDropzone.classList.add('drag-over');
+});
+programDropzone?.addEventListener('dragleave', event => {
+  if (!programDropzone.contains(event.relatedTarget)) programDropzone.classList.remove('drag-over');
+});
+programDropzone?.addEventListener('drop', event => {
+  event.preventDefault();
+  programDropzone.classList.remove('drag-over');
+  selectProgramFiles(event.dataTransfer?.files);
+});
+
+async function runSelectedPrograms() {
+  if (!selectedProgramFiles.length) {
     const status = $('programFilesStatus');
     status.classList.add('error');
-    status.textContent = error.message;
+    status.textContent = 'Drop or browse for source files first.';
+    return false;
   }
+  const status = $('programFilesStatus');
+  const outputPanel = $('programRunOutputPanel');
+  const output = $('programRunOutput');
+  const title = $('programRunTitle');
+  status.classList.remove('error');
+  if (programRunInProgress) return false;
+  programRunInProgress = true;
+  const completed = [];
+  const report = [];
+  outputPanel.classList.remove('hidden');
+  title.textContent = 'Running source files';
+  output.textContent = '';
+  output.dataset.programReport = '';
+  try {
+    for (let index = 0; index < selectedProgramFiles.length; index++) {
+      const file = selectedProgramFiles[index];
+      status.textContent = `Running ${index + 1} of ${selectedProgramFiles.length}: ${file.name}…`;
+      output.textContent = status.textContent;
+      let result;
+      try {
+        const response = await fetch(`/api/v1/programs/run?filename=${encodeURIComponent(file.name)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: file,
+        });
+        result = await response.json();
+        if (!response.ok) throw new Error(result.detail || 'Could not run this source file.');
+      } catch (error) {
+        result = { ok: false, phase: 'run', error: error.message, stdout: '', stderr: '' };
+      }
+
+      report.push(`=== ${file.name} ===`);
+      if (result.ok) {
+        const stem = file.name.slice(0, file.name.lastIndexOf('.'));
+        const baseId = stem.normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 36) || 'Program';
+        const usedIds = new Set(completed.map(process => process.id.toLowerCase()));
+        let id = baseId;
+        let suffix = 2;
+        while (usedIds.has(id.toLowerCase())) {
+          const suffixText = `-${suffix++}`;
+          id = `${baseId.slice(0, 40 - suffixText.length)}${suffixText}`;
+        }
+        const burst = clamp(Math.ceil(Math.max(1, result.runtime_ms) / 10), 1, 500);
+        completed.push({
+          id,
+          sourceFile: file.name,
+          arrival: 0,
+          burst,
+          measuredRuntimeMs: result.runtime_ms,
+          priority: 1,
+          deadline: burst + 10,
+          color: PALETTE[completed.length % PALETTE.length],
+          state: 'Ready',
+        });
+        report.push(`Ran in ${result.runtime_ms} ms; simulated burst ${burst} units.`);
+      } else {
+        report.push(result.error || (result.timed_out ? 'Stopped after the 5 second limit.' : `${result.phase === 'compile' ? 'Compilation failed' : `Exited with code ${result.exit_code}`}.`));
+      }
+      if (result.stdout) report.push(`stdout:\n${result.stdout}`);
+      if (result.stderr) report.push(`stderr:\n${result.stderr}`);
+    }
+
+    if (completed.length) {
+      processes = completed;
+      processQueueBeforeProgramSelection = null;
+      addLog(`Ran ${completed.length} source program${completed.length === 1 ? '' : 's'} and simulated measured bursts`);
+      renderTable();
+      updateNavCount();
+      runSim();
+    }
+    const failed = selectedProgramFiles.length - completed.length;
+    programFilesPrepared = completed.length > 0;
+    if (!completed.length) restoreProcessQueueAfterProgramFailure();
+    status.classList.toggle('error', failed > 0 || !completed.length);
+    status.textContent = completed.length
+      ? `Simulating ${completed.length} program${completed.length === 1 ? '' : 's'}; ${failed} failed. Gantt, WT, and TAT use the measured bursts.`
+      : 'No programs ran successfully; the existing process queue was kept.';
+    title.textContent = completed.length ? 'Program output and measured runtimes' : 'Program run results';
+    output.dataset.programReport = report.join('\n\n').slice(0, 100_000) || '(no output)';
+    output.textContent = output.dataset.programReport;
+    return completed.length > 0;
+  } catch (error) {
+    restoreProcessQueueAfterProgramFailure();
+    status.classList.add('error');
+    status.textContent = error.message;
+    title.textContent = 'Could not run source files';
+    output.textContent = error.message;
+    return false;
+  } finally {
+    programRunInProgress = false;
+  }
+}
+
+async function playOrRunPrograms() {
+  if (programRunInProgress) return;
+  if (selectedProgramFiles.length && !programFilesPrepared) {
+    pause();
+    const ranPrograms = await runSelectedPrograms();
+    if (!ranPrograms) return;
+  }
+  play();
+}
+
+async function startSchedulingFromTerminal() {
+  if (!allSnaps.length && !selectedProgramFiles.length) {
+    $('programRunOutput').textContent = 'No scheduling run is ready. Update the workload or settings, then try again.';
+    return;
+  }
+  $('programRunOutput').textContent = 'Starting scheduling...';
+  await playOrRunPrograms();
+}
+
+$('terminalCommand')?.addEventListener('keydown', event => {
+  const input = event.currentTarget;
+  event.preventDefault();
   input.value = '';
+  if (event.key === 'Enter') {
+    startSchedulingFromTerminal();
+    return;
+  }
+  pause();
+  $('programRunOutput').textContent = 'Scheduling stopped.';
 });
 
 // Workload generator
@@ -1605,9 +1866,19 @@ presetSel?.addEventListener('change', () => {
     realtime:     [{ id:'P1',arrival:0,burst:2,priority:1,deadline:4  },{ id:'P2',arrival:1,burst:4,priority:2,deadline:8  },{ id:'P3',arrival:0,burst:1,priority:1,deadline:2  },{ id:'P4',arrival:2,burst:3,priority:3,deadline:10 }],
   };
   const ps = PRESETS[presetSel.value];
-  if (!ps) return;
+  const status = $('presetStatus');
+  if (!ps) {
+    if (status) status.textContent = 'Choose a workload preset to load processes and update the simulation.';
+    return;
+  }
   processes = ps.map((p, i) => ({ ...p, color:PALETTE[i%PALETTE.length], state:'Ready' }));
   addLog(`Preset: ${presetSel.value}`); renderTable(); runSim();
+  if (status) {
+    const name = presetSel.options[presetSel.selectedIndex]?.textContent || presetSel.value;
+    status.textContent = presetSel.value === 'balanced'
+      ? `${name} loaded (${processes.length} processes). This is the same workload as the starter example; simulation recalculated.`
+      : `${name} loaded (${processes.length} processes); simulation recalculated.`;
+  }
 });
 
 // Keyboard shortcuts
@@ -1633,9 +1904,9 @@ if (window.A11yManager) {
     document.documentElement.classList.add('light');
   }
 } else {
-  setTheme(readStoredValue('cpu-simulator-theme') === 'dark');
+  setTheme(readStoredValue(profileSettingKey('cpu-simulator-theme')) === 'dark');
 }
-setMotion(readStoredValue('cpu-simulator-motion') === 'reduced');
+setMotion(readStoredValue(profileSettingKey('cpu-simulator-motion')) === 'reduced');
 restore();
 renderAlgoNote();
 renderJobQueue();

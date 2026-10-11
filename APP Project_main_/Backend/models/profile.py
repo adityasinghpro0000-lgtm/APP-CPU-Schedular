@@ -19,7 +19,7 @@ class Profile(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), unique=True, index=True, nullable=False)
     role = Column(String(50), default="Project user")
-    avatar = Column(Text, nullable=True)  # Base64 encoded image
+    avatar = Column(Text, nullable=True)  # Legacy database field; profile photos stay in browser storage.
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

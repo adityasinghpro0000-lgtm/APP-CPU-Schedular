@@ -10,9 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fira+Code:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="accessibility.js"></script>
+  <script src="accessibility.js?v=profile-isolation-1"></script>
   <script src="api.js"></script>
-  <script src="profile.js"></script>
+  <script src="profile.js?v=profile-isolation-1"></script>
 </head>
 <body>
   <a class="skip-link" href="#logsPage">Skip to system logs</a>
@@ -114,9 +114,9 @@
     let currentLogs=[];
     const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     function renderLogs(logs){currentLogs=logs||[];logList.innerHTML=currentLogs.length?currentLogs.map(log=>{const time=log.timestamp?new Date(log.timestamp).toLocaleString():(log.time||'');return '<li class="system-log-entry"><span class="system-log-time">'+escapeHtml(time)+'</span><span class="system-log-message">'+escapeHtml(log.message)+'</span></li>';}).join(''):'<li class="system-log-empty">No system activity recorded yet.</li>';}
-    async function loadLogs(){await window.ProfileManager?.ready;const profileId=window.ProfileManager?.readProfile()?.id;try{let logs=await window.AppAPI.listLogs(profileId);if(!logs.length){let cached=[];try{cached=JSON.parse(localStorage.getItem('cpu-simulator-logs')||'[]');}catch(_){}for(const entry of cached.slice(0,50).reverse())await window.AppAPI.createLog(entry.message||'Activity',profileId);logs=await window.AppAPI.listLogs(profileId);}renderLogs(logs);}catch(error){console.warn('Could not load MySQL logs:',error);try{renderLogs(JSON.parse(localStorage.getItem('cpu-simulator-logs')||'[]'));}catch(_){renderLogs([]);}}}
+    async function loadLogs(){await window.ProfileManager?.ready;const profileId=window.ProfileManager?.readProfile()?.id;const profileScope=window.ProfileManager?.getStorageScope?.()||profileId||'default';const logsKey='cpu-simulator-logs-'+profileScope;try{let logs=await window.AppAPI.listLogs(profileId);if(!logs.length){let cached=[];try{cached=JSON.parse(localStorage.getItem(logsKey)||'[]');}catch(_){}for(const entry of cached.slice(0,50).reverse())await window.AppAPI.createLog(entry.message||'Activity',profileId);logs=await window.AppAPI.listLogs(profileId);}renderLogs(logs);}catch(error){console.warn('Could not load MySQL logs:',error);try{renderLogs(JSON.parse(localStorage.getItem(logsKey)||'[]'));}catch(_){renderLogs([]);}}}
     document.querySelector('#exportLogs').addEventListener('click',()=>{const content=currentLogs.map(log=>(log.timestamp?new Date(log.timestamp).toLocaleString():(log.time||''))+'  '+log.message).join('\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([content||'No system activity recorded yet.'],{type:'text/plain'}));link.download='cpu-simulator-system-logs.txt';link.click();URL.revokeObjectURL(link.href);});
-    document.querySelector('#clearLogsButton').addEventListener('click',async()=>{if(!window.confirm('Clear all saved system logs?'))return;const profileId=window.ProfileManager?.readProfile()?.id;try{await window.AppAPI.clearLogs(profileId);localStorage.removeItem('cpu-simulator-logs');renderLogs([]);}catch(error){window.alert('Could not clear logs from MySQL: '+error.message);}});
+    document.querySelector('#clearLogsButton').addEventListener('click',async()=>{if(!window.confirm('Clear all saved system logs?'))return;const profileId=window.ProfileManager?.readProfile()?.id;const profileScope=window.ProfileManager?.getStorageScope?.()||profileId||'default';try{await window.AppAPI.clearLogs(profileId);localStorage.removeItem('cpu-simulator-logs-'+profileScope);renderLogs([]);}catch(error){window.alert('Could not clear logs from MySQL: '+error.message);}});
 
     document.querySelector('#sidebarDateTime').textContent = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
     setInterval(() => { document.querySelector('#sidebarDateTime').textContent = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' }); }, 1000);

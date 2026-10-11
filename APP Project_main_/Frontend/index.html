@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=config-layout-1" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -111,7 +111,7 @@
         <div id="profileStatus" class="profile-status" aria-live="polite"></div>
       </section>
       <section class="config-panel" aria-labelledby="configTitle">
-        <div class="config-heading"><div><h2 id="configTitle"><i data-lucide="settings-2"></i> Scheduler Configuration &amp; Workload</h2><p>Configure algorithm parameters, context switches, and process burst times.</p></div><div class="preset-control"><label for="preset">Preset:</label><div class="select-wrap"><select id="preset" aria-label="Select benchmark preset"><option value="custom">Select Benchmark Preset...</option><option value="balanced">Balanced workload</option><option value="burst-heavy">Burst-heavy workload</option><option value="interactive">Interactive workload</option></select><i data-lucide="chevrons-up-down"></i></div></div></div>
+        <div class="config-heading"><div><h2 id="configTitle"><i data-lucide="settings-2"></i> Scheduler Configuration &amp; Workload</h2><p>Configure algorithm parameters, context switches, and process burst times.</p><span id="presetStatus" class="preset-status" role="status" aria-live="polite"></span></div><div class="preset-control"><label for="preset">Preset:</label><div class="select-wrap"><select id="preset" aria-label="Select benchmark preset"><option value="custom">Select Benchmark Preset...</option><option value="balanced">Balanced workload</option><option value="burst-heavy">Burst-heavy workload</option><option value="interactive">Interactive workload</option></select><i data-lucide="chevrons-up-down"></i></div></div></div>
         <div class="config-grid">
           <div class="config-field"><label for="algorithm">Scheduling algorithm</label><div class="select-wrap"><select id="algorithm"><option value="fcfs">First Come, First Served (FCFS)</option><option value="sjf">Shortest Job First (SJF)</option><option value="srtf">Shortest Remaining Time First (SRTF)</option><option value="rr">Round Robin (RR)</option><option value="priority_np">Priority (Non-Preemptive)</option><option value="priority_p">Priority (Preemptive)</option><option value="mlfq">Multi-Level Feedback Queue (MLFQ)</option><option value="edf">Earliest Deadline First (EDF)</option><option value="cfs">Completely Fair Scheduler (CFS)</option></select><i data-lucide="chevrons-up-down"></i></div></div>
           <div class="config-field quantum-control hidden"><label for="quantum">Time quantum (Q) <span class="active-tag">Active</span></label><div class="input-wrap"><input id="quantum" type="number" min="1" max="20" value="2" /><span>units</span></div></div>
@@ -126,8 +126,8 @@
       </section>
 
       <section class="workspace-grid" id="processes">
-        <div class="panel process-panel"><div class="panel-heading"><div><p class="panel-kicker">INPUT</p><div class="title-with-info"><h2>Process queue</h2><details class="title-info"><summary aria-label="Show process definition"><i data-lucide="chevron-down"></i></summary><span class="title-definition">A process is an admitted job ready for CPU scheduling. The CPU scheduler selects it to run and tracks its execution state and performance.</span></details></div></div><div class="process-import-control"><button class="secondary-button text-button" id="programFilesButton" type="button"><i data-lucide="file-plus-2"></i> Add program files</button><input id="programFilesInput" type="file" accept=".py,.c,.cc,.cpp,.cxx" multiple hidden><p>Python, C, and C++ source files become simulated processes. Set arrival, burst, and priority in the table. Files are not executed.</p><span id="programFilesStatus" role="status" aria-live="polite"></span></div></div><div class="table-wrap"><table><thead><tr><th>Color</th><th>Process name</th><th>Arrival time</th><th>Burst time</th><th>Priority</th><th class="deadline-header hidden">Deadline</th><th>State</th><th>Actions</th></tr></thead><tbody id="processTable"></tbody></table></div><div class="table-foot"><span id="processCount">5 processes</span><span class="workload-summary">Total workload burst: <strong id="workloadTotal">0 units</strong></span></div></div>
-        <div class="panel info-panel" id="algorithms"><div class="panel-heading"><div><p class="panel-kicker">ALGORITHM NOTE</p><h2 id="algorithmTitle">FCFS</h2></div><span class="tag" id="algorithmTag">NON-PREEMPTIVE</span></div><p id="algorithmDescription">Processes are executed in the order they arrive. Simple, predictable, and a good baseline for comparing other strategies.</p><div class="formula"><span>Next process</span><strong id="formulaText">min(arrival time)</strong></div><a href="#" class="text-link">View algorithm details <i data-lucide="arrow-up-right"></i></a></div>
+        <div class="panel process-panel"><div class="panel-heading"><div><p class="panel-kicker">INPUT</p><div class="title-with-info"><h2>Process queue</h2><details class="title-info"><summary aria-label="Show process definition"><i data-lucide="chevron-down"></i></summary><span class="title-definition">A process is an admitted job ready for CPU scheduling. The CPU scheduler selects it to run and tracks its execution state and performance.</span></details></div></div></div><div class="process-import-control program-run-control"><label id="programDropzone" for="programFilesInput" class="program-dropzone" tabindex="0"><span>Drop source files here or click to browse</span><small>Python, C, or C++ · Up to 10 files, 256 KB each. Browse again to add more.</small><input id="programFilesInput" class="program-file-input" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0" type="file" accept=".py,.c,.cc,.cpp,.cxx" multiple tabindex="-1"><ul id="programFileList" class="program-file-list"></ul></label><p>Click the green Gantt play button to run selected files and simulate their measured runtimes. Execution stops after 5 seconds per file.</p><span id="programFilesStatus" role="status" aria-live="polite"></span></div><div class="table-wrap"><table><thead><tr><th>Color</th><th>Process name</th><th>Arrival time</th><th>Burst time</th><th>Priority</th><th class="deadline-header hidden">Deadline</th><th>State</th><th>Actions</th></tr></thead><tbody id="processTable"></tbody></table></div><div class="table-foot"><span id="processCount">5 processes</span><span class="workload-summary">Total workload burst: <strong id="workloadTotal">0 units</strong></span></div></div>
+        <div class="process-side-stack"><div class="panel info-panel" id="algorithms"><div class="panel-heading"><div><p class="panel-kicker">ALGORITHM NOTE</p><h2 id="algorithmTitle">FCFS</h2></div><span class="tag" id="algorithmTag">NON-PREEMPTIVE</span></div><p id="algorithmDescription">Processes are executed in the order they arrive. Simple, predictable, and a good baseline for comparing other strategies.</p><div class="formula"><span>Next process</span><strong id="formulaText">min(arrival time)</strong></div><a href="#" class="text-link">View algorithm details <i data-lucide="arrow-up-right"></i></a></div><div id="programRunOutputPanel" class="program-terminal" aria-live="polite"><div class="terminal-titlebar"><div class="terminal-tab"><i class="terminal-app-icon" data-lucide="terminal" aria-hidden="true"></i><span>Terminal</span></div><div class="terminal-window-actions" aria-hidden="true"><span>−</span><span>□</span><span>×</span></div></div><div class="terminal-screen"><strong id="programRunTitle" class="terminal-heading">Process completion order</strong><div class="terminal-command-line"><label class="terminal-prompt" for="terminalCommand">C:\CPU-Scheduler&gt;</label><input id="terminalCommand" type="text" autocomplete="off" spellcheck="false" aria-label="Terminal keyboard controls"></div><pre id="programRunOutput" role="log" aria-live="polite">Press Enter to start scheduling. Press any other key to stop.</pre></div></div></div>
       </section>
 
       <section class="panel job-scheduler-panel" id="jobs" aria-labelledby="jobSchedulerTitle">
@@ -159,7 +159,7 @@
         </div>
       </section>
       <section class="panel pipeline-panel" aria-labelledby="pipelineTitle">
-        <div class="panel-heading"><div><p class="panel-kicker">CPU PIPELINE</p><h2 id="pipelineTitle">Instruction flow</h2></div><span class="mono" id="pipelineClock">t = —</span></div>
+        <div class="panel-heading"><div><p class="panel-kicker">CPU PIPELINE</p><h2 id="pipelineTitle">Instruction flow</h2></div><div class="pipeline-readouts"><span class="mono" id="pipelineClock">t = —</span><span class="mono program-counter-readout" id="programCounterReadout">PC: —</span></div></div>
         <div class="pipeline-stages" id="pipelineStages" aria-live="polite">
           <div class="pipeline-stage"><span>FETCH</span><strong>—</strong></div>
           <div class="pipeline-stage"><span>DECODE</span><strong>—</strong></div>
@@ -284,13 +284,13 @@
       </footer>
     </main>
   </div>
-  <script src="accessibility.js"></script>
+  <script src="accessibility.js?v=profile-isolation-1"></script>
   <script src="api.js"></script>
-  <script src="profile.js"></script>
-  <script src="app.js"></script>
+  <script src="profile.js?v=profile-isolation-1"></script>
+  <script src="app.js?v=profile-isolation-1"></script>
   <script>
     if (document.documentElement.dataset.demo === 'true') {
-      document.querySelectorAll('.workspace-nav-link, #profileToggle, .breadcrumb a[href="workspace.html"]').forEach(element => element.remove());
+      document.querySelectorAll('.workspace-nav-link, #profileToggle, .breadcrumb a[href="workspace.html"], .program-run-control').forEach(element => element.remove());
       document.body.classList.add('demo-mode');
     }
   </script>
