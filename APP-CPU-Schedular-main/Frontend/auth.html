@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f4f1ea" />
+  <title>Sign in · Interactive Job and CPU Scheduler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="auth.css?v=auth-demo-link-5" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="accessibility.js"></script>
+</head>
+<body>
+  <div class="auth-page-tools">
+    <button class="auth-tool-button" id="themeToggle" type="button" title="Switch to dark theme" aria-label="Switch to dark theme" aria-pressed="false"><i data-lucide="moon"></i></button>
+    <button class="auth-tool-button" id="accessibilityToggle" type="button" title="Accessibility options" aria-label="Accessibility options" aria-expanded="false" aria-controls="accessibilityPanel"><i data-lucide="accessibility"></i></button>
+  </div>
+  <section class="accessibility-panel auth-accessibility-panel" id="accessibilityPanel" aria-label="Accessibility options" hidden>
+    <div class="accessibility-heading">TEXT SIZE</div>
+    <div class="accessibility-grid">
+      <button type="button" data-text-size="small">A<sup>-</sup><span>A- Decrease</span></button>
+      <button type="button" data-text-size="normal">A<span>Normal (100%)</span></button>
+      <button type="button" data-text-size="large">A<sup>+</sup><span>A+ Increase</span></button>
+    </div>
+    <div class="accessibility-heading">ZOOM</div>
+    <div class="zoom-controls"><span>Zoom</span><button type="button" data-zoom="decrease" aria-label="Decrease zoom">-</button><strong id="zoomValue" aria-live="polite">100%</strong><button type="button" data-zoom="increase" aria-label="Increase zoom">+</button></div>
+    <div class="accessibility-heading">CONTRAST</div>
+    <div class="accessibility-grid contrast-grid"><button type="button" data-contrast="normal"><span>Normal</span></button><button type="button" data-contrast="high"><span>High Contrast</span></button></div>
+    <button type="button" class="accessibility-reset" id="accessibilityReset">Reset all</button>
+  </section>
+  <main class="auth-layout">
+    <section class="story" aria-label="About the simulator">
+      <a class="brand" href="/"><span class="brand-mark"><i data-lucide="cpu"></i></span> APP Project</a>
+      <div class="story-copy"><p class="eyebrow">INTERACTIVE JOB AND CPU SCHEDULER</p><h1>Trust The<br /><em>Process.</em></h1><p>Sign in to continue to your workspace and explore CPU scheduling in action.</p></div>
+      <div class="story-foot">ADVANCED PROGRAMMING PRACTICE</div>
+    </section>
+    <section class="form-side">
+      <div class="auth-card">
+        <p class="eyebrow">YOUR WORKSPACE</p>
+        <h2 id="formTitle">Welcome back</h2>
+        <p class="subheading" id="formSubtitle">Sign in to pick up where you left off.</p>
+        <div class="tabs" role="tablist" aria-label="Account access">
+          <button type="button" class="tab active" id="loginTab" role="tab" aria-selected="true">Log in</button>
+          <button type="button" class="tab" id="signupTab" role="tab" aria-selected="false">Create account</button>
+        </div>
+        <form id="authForm" novalidate>
+          <div id="usernameField"><label for="username">Username</label>
+          <input id="username" name="username" autocomplete="username" minlength="3" maxlength="50" required /></div>
+          <div id="emailField" hidden><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" maxlength="255" /></div>
+          <div id="passwordField"><label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required /></div>
+          <div id="resetPasswordField" hidden><label for="newPassword">New password</label><input id="newPassword" name="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" /></div>
+          <div class="password-actions">
+            <button type="button" class="forgot-password" id="forgotPassword" aria-label="Forgot password?">Forgot password?</button>
+            <button type="button" class="forgot-password" id="backToLogin" hidden>Back to login</button>
+          </div>
+          <p class="hint" id="passwordHint" hidden>Use at least 8 characters.</p>
+          <button class="submit" id="submitButton" type="submit">Log in <span aria-hidden="true">→</span></button>
+          <p class="status" id="status" role="status" aria-live="polite"></p>
+        </form>
+        <p class="privacy">Your account is stored securely with a hashed password.</p>
+        <a class="auth-demo-link" href="index.html?demo=1#simulator"><i data-lucide="play-circle" aria-hidden="true"></i><span>Try the Demo Simulator</span></a>
+      </div>
+    </section>
+  </main>
+  <script src="auth.js?v=password-reset-1"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

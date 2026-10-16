@@ -132,7 +132,7 @@
 
       <section class="panel job-scheduler-panel" id="jobs" aria-labelledby="jobSchedulerTitle">
         <div class="panel-heading job-scheduler-heading">
-          <div><p class="panel-kicker">LONG-TERM SCHEDULER</p><div class="title-with-info"><h2 id="jobSchedulerTitle">Job scheduler</h2><details class="title-info"><summary aria-label="Show job definition"><i data-lucide="chevron-down"></i></summary><span class="title-definition">A job is submitted work waiting for admission. Its arrival time controls eligibility; the admission policy decides which eligible jobs enter the CPU queue.</span></details></div><p class="job-scheduler-description">Queue incoming jobs, then admit them to the CPU process queue.</p></div>
+          <div><p class="panel-kicker">LONG-TERM SCHEDULER</p><div class="title-with-info"><h2 id="jobSchedulerTitle">Job scheduler</h2><details class="title-info"><summary aria-label="Show job definition"><i data-lucide="chevron-down"></i></summary><span class="title-definition">A job is submitted work waiting for admission. Its arrival time controls eligibility; the admission policy decides which eligible jobs enter the CPU queue.</span></details></div><p class="job-scheduler-description">Eligible jobs are admitted automatically using the selected policy and batch capacity.</p></div>
           <div class="job-policy-control"><label for="jobPolicy">Admission policy</label><div class="select-wrap"><select id="jobPolicy"><option value="fcfs">First Come, First Served</option><option value="sjf">Shortest Job First</option><option value="priority">Priority</option><option value="edf">Earliest Deadline First</option></select><i data-lucide="chevrons-up-down"></i></div></div>
         </div>
         <div class="job-entry-controls">
@@ -145,7 +145,7 @@
           <button class="add-button generate-jobs-button" id="generateJobs" type="button"><i data-lucide="dice-5"></i> Generate jobs</button>
         </div>
         <div class="table-wrap"><table><thead><tr><th>Job</th><th>Arrival</th><th>CPU burst</th><th>Priority</th><th>Deadline</th><th>Actions</th></tr></thead><tbody id="jobTable"></tbody></table></div>
-        <div class="job-scheduler-footer"><span id="jobQueueCount">0 queued jobs</span><label>Admission time<input id="jobAdmissionTime" type="number" min="0" value="0" /></label><label>Batch capacity<input id="jobCapacity" type="number" min="1" max="20" value="5" /></label><span id="jobSchedulerStatus" role="status" aria-live="polite"></span><button class="primary-button" id="admitJobs" type="button" disabled><i data-lucide="log-in"></i> Admit jobs to CPU queue</button></div>
+        <div class="job-scheduler-footer"><span id="jobQueueCount">0 queued jobs</span><label>Admission time<input id="jobAdmissionTime" type="number" min="0" value="0" /></label><label>Batch capacity<input id="jobCapacity" type="number" min="1" max="20" value="5" /></label><span id="jobSchedulerStatus" role="status" aria-live="polite"></span></div>
       </section>
 
       <section class="panel monitor-panel dev-monitor" aria-labelledby="monitorTitle">

@@ -16,9 +16,9 @@ Open <http://127.0.0.1:8000/>. C and C++ files require `gcc` and `g++` respectiv
 
 ## Run source program files
 
-1. In **Process queue**, drop source files into the file area or click it to choose files.
+1. In **Process queue**, drop source files into the file area or click it to choose files. They appear immediately in **Job scheduler** as pending program jobs with an unmeasured burst; they are not placeholder processes and cannot be admitted until measured.
 2. Select up to 10 files. Each file must be 256 KB or smaller and contain UTF-8 source text.
-3. Press **Gantt Play**. The server runs the selected programs, measures successful runs, and builds the simulated process queue from those measurements.
+3. Press **Gantt Play**. The server runs the selected programs, measures successful runs, and adds simulated processes for them to the existing process queue.
 4. Use the Gantt playback controls to inspect execution. The terminal shows source output, run results, and process completion progress.
 
 Supported extensions:

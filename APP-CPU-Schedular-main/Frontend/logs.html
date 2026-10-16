@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f1ea" />
+  <title>System Logs - CPU Scheduling Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fira+Code:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="accessibility.js?v=profile-isolation-1"></script>
+  <script src="api.js"></script>
+  <script src="profile.js?v=profile-isolation-1"></script>
+</head>
+<body>
+  <a class="skip-link" href="#logsPage">Skip to system logs</a>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark"><i data-lucide="cpu"></i></span><span>APP Project</span></div>
+      <div class="side-label">Workspace</div>
+      <nav class="nav-list" aria-label="Main navigation">
+        <a class="nav-item" href="workspace.html"><i data-lucide="layout-dashboard"></i><span>Workspace</span></a>
+        <div class="nav-group nav-collapsible"><button class="nav-item nav-group-toggle" type="button" aria-expanded="false" aria-controls="simulatorSubmenu"><i data-lucide="gauge"></i><span>Simulator</span><i class="nav-chevron" data-lucide="chevron-down"></i></button><div class="nav-sublist" id="simulatorSubmenu"><a class="nav-item" href="index.html#processes"><i data-lucide="list-tree"></i><span>Process Queue</span></a><a class="nav-item" href="index.html#jobs"><i data-lucide="briefcase-business"></i><span>JOB Queue</span></a><a class="nav-item" href="index.html#metrics"><i data-lucide="bar-chart-3"></i><span>Analytics</span></a></div></div>
+        <a class="nav-item active" href="logs.html" aria-current="page"><i data-lucide="scroll-text"></i><span>System Logs</span></a>
+      </nav>
+      <div class="side-label learn-label">Reference</div>
+      <nav class="nav-list">
+        <a class="nav-item" href="index.html#algorithms"><i data-lucide="book-open"></i><span>Algorithms</span></a>
+        <a class="nav-item" href="index.html#shortcuts"><i data-lucide="keyboard"></i><span>Shortcuts</span></a>
+        <a class="nav-item" href="about.html"><i data-lucide="info"></i><span>About Project</span></a>
+      </nav>
+      <div class="sidebar-time" id="sidebarDateTime"></div>
+      <div class="sidebar-foot"><div class="status-row"><span class="status-dot"></span><span>Engine ready</span></div></div>
+    </aside>
+
+    <main class="main-content" id="logsPage">
+      <header class="topbar">
+        <div class="breadcrumb"><a href="workspace.html">Workspace</a><i data-lucide="chevron-right"></i><a href="index.html#simulator"><strong>CPU simulator</strong></a><i data-lucide="chevron-right"></i><strong>System Logs</strong></div>
+        <div class="top-actions">
+          <a class="icon-button" href="index.html" title="Back to simulator" aria-label="Back to simulator"><i data-lucide="arrow-left"></i></a>
+          <button class="icon-button" id="themeToggle" title="Switch to dark theme" aria-label="Switch to dark theme" aria-pressed="false"><i data-lucide="moon"></i></button>
+          <button class="icon-button" id="accessibilityToggle" title="Accessibility options" aria-label="Accessibility options" aria-expanded="false" aria-controls="accessibilityPanel">
+            <svg class="accessibility-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+              <circle cx="12" cy="4" r="2.2" />
+              <rect x="4.5" y="8" width="15" height="2.8" rx="1.4" />
+              <rect x="8.5" y="8" width="7" height="6.5" />
+              <rect x="8.5" y="14" width="2.8" height="7.5" rx="1.2" />
+              <rect x="12.7" y="14" width="2.8" height="7.5" rx="1.2" />
+            </svg>
+          </button>
+          <a class="avatar" id="profileToggle" href="profile.html" title="Open profile picker" aria-label="Open profile picker">AK</a>
+        </div>
+      </header>
+
+      <section class="page-intro">
+        <div><p class="eyebrow">ACTIVITY MONITOR</p><h1>System <em>Logs</em></h1><p class="intro-copy">Recent scheduling activity captured by the simulator.</p></div>
+      </section>
+
+      <section class="accessibility-panel" id="accessibilityPanel" aria-label="Accessibility options" hidden>
+        <div class="accessibility-heading">TEXT SIZE</div>
+        <div class="accessibility-grid">
+          <button type="button" data-text-size="small">A<sup>-</sup><span>A- Decrease</span></button>
+          <button type="button" class="selected" data-text-size="normal">A<span>Normal (100%)</span></button>
+          <button type="button" data-text-size="large">A<sup>+</sup><span>A+ Increase</span></button>
+        </div>
+        <div class="accessibility-heading">ZOOM</div>
+        <div class="zoom-controls">
+          <span>Zoom</span>
+          <button type="button" data-zoom="decrease" aria-label="Decrease zoom">-</button>
+          <strong id="zoomValue" aria-live="polite">100%</strong>
+          <button type="button" data-zoom="increase" aria-label="Increase zoom">+</button>
+        </div>
+        <div class="accessibility-heading">CONTRAST</div>
+        <div class="accessibility-grid contrast-grid">
+          <button type="button" class="selected" data-contrast="normal">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>
+            <span>Normal</span>
+          </button>
+          <button type="button" data-contrast="high">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0 0 18V3z"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span>High Contrast</span>
+          </button>
+        </div>
+        <button type="button" class="accessibility-reset" id="accessibilityReset">Reset all</button>
+      </section>
+
+      <section class="profile-panel" id="profilePanel" aria-label="Profile options" hidden>
+        <div class="profile-summary">
+          <span class="profile-badge" id="profileBadge">AK</span>
+          <div>
+            <strong id="profileName">AK</strong>
+            <small id="profileRole">Project user</small>
+          </div>
+        </div>
+        <div id="profileList" class="profile-list" role="list" aria-label="Saved profiles"></div>
+        <div class="profile-actions">
+          <button type="button" class="profile-option" id="profileCreate"><i data-lucide="user-plus"></i> Create profile</button>
+          <button type="button" class="profile-option" id="profileRename"><i data-lucide="user-pen"></i> Rename profile</button>
+          <button type="button" class="profile-option" data-clear-logs="true"><i data-lucide="trash-2"></i> Clear logs</button>
+          <button type="button" class="profile-option" id="profileResetView"><i data-lucide="refresh-cw"></i> Reset view</button>
+          <button type="button" class="profile-option secondary" id="profileReset"><i data-lucide="rotate-ccw"></i> Reset profile</button>
+        </div>
+        <div id="profileStatus" class="profile-status" aria-live="polite"></div>
+      </section>
+      
+
+      <section class="panel logs-panel standalone-logs"><div class="panel-heading"><div><p class="panel-kicker">EVENT STREAM</p><h2>Recent activity</h2></div><div class="logs-actions"><button class="logs-export" id="exportLogs" type="button"><i data-lucide="download"></i> Export Logs</button><button class="logs-export danger" id="clearLogsButton" type="button"><i data-lucide="trash-2"></i> Clear Logs</button></div></div><ul class="system-log-list" id="systemLogList" aria-live="polite"></ul></section>
+    </main>
+  </div>
+  <script>
+    const logList=document.querySelector('#systemLogList');
+    let currentLogs=[];
+    const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    function renderLogs(logs){currentLogs=logs||[];logList.innerHTML=currentLogs.length?currentLogs.map(log=>{const time=log.timestamp?new Date(log.timestamp).toLocaleString():(log.time||'');return '<li class="system-log-entry"><span class="system-log-time">'+escapeHtml(time)+'</span><span class="system-log-message">'+escapeHtml(log.message)+'</span></li>';}).join(''):'<li class="system-log-empty">No system activity recorded yet.</li>';}
+    async function loadLogs(){await window.ProfileManager?.ready;const profileId=window.ProfileManager?.readProfile()?.id;const profileScope=window.ProfileManager?.getStorageScope?.()||profileId||'default';const logsKey='cpu-simulator-logs-'+profileScope;try{let logs=await window.AppAPI.listLogs(profileId);if(!logs.length){let cached=[];try{cached=JSON.parse(localStorage.getItem(logsKey)||'[]');}catch(_){}for(const entry of cached.slice(0,50).reverse())await window.AppAPI.createLog(entry.message||'Activity',profileId);logs=await window.AppAPI.listLogs(profileId);}renderLogs(logs);}catch(error){console.warn('Could not load MySQL logs:',error);try{renderLogs(JSON.parse(localStorage.getItem(logsKey)||'[]'));}catch(_){renderLogs([]);}}}
+    document.querySelector('#exportLogs').addEventListener('click',()=>{const content=currentLogs.map(log=>(log.timestamp?new Date(log.timestamp).toLocaleString():(log.time||''))+'  '+log.message).join('\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([content||'No system activity recorded yet.'],{type:'text/plain'}));link.download='cpu-simulator-system-logs.txt';link.click();URL.revokeObjectURL(link.href);});
+    document.querySelector('#clearLogsButton').addEventListener('click',async()=>{if(!window.confirm('Clear all saved system logs?'))return;const profileId=window.ProfileManager?.readProfile()?.id;const profileScope=window.ProfileManager?.getStorageScope?.()||profileId||'default';try{await window.AppAPI.clearLogs(profileId);localStorage.removeItem('cpu-simulator-logs-'+profileScope);renderLogs([]);}catch(error){window.alert('Could not clear logs from MySQL: '+error.message);}});
+
+    document.querySelector('#sidebarDateTime').textContent = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
+    setInterval(() => { document.querySelector('#sidebarDateTime').textContent = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' }); }, 1000);
+    document.querySelector('.nav-group-toggle')?.addEventListener('click', event => {
+      const toggle = event.currentTarget;
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      toggle.closest('.nav-collapsible')?.classList.toggle('is-open', !expanded);
+    });
+    loadLogs();
+    lucide.createIcons();
+  </script>
+</body>
+</html>

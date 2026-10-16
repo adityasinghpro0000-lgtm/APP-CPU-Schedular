@@ -489,14 +489,21 @@ function compareJobs(left, right, policy) {
 function renderJobQueue() {
   const policy = $('jobPolicy').value;
   const queuedJobs = jobs.map((job, queueOrder) => ({ ...job, queueOrder })).sort((left, right) => compareJobs(left, right, policy));
+  const pendingPrograms = programFilesPrepared
+    ? selectedProgramFiles.filter(file => !processes.some(process => process.sourceFile === file.name))
+    : selectedProgramFiles;
   $('jobTable').innerHTML = queuedJobs.map(job => `
     <tr>
       <td><strong>${job.id}</strong></td><td>${job.arrival}</td><td>${job.burst}</td>
       <td>${job.priority}</td><td>${job.deadline}</td>
       <td><button type="button" class="delete-button job-delete-button" data-job-remove="${job.id}" aria-label="Remove job ${job.id}" title="Remove job ${job.id}"><i data-lucide="trash-2"></i><span>Remove</span></button></td>
+    </tr>`).join('') + pendingPrograms.map(file => `
+    <tr class="program-job-pending">
+      <td><strong>${escapeHTML(file.name)}</strong><small>Program job · pending measurement</small></td>
+      <td>0</td><td>Unmeasured</td><td>1</td><td>—</td><td>Run with Gantt Play</td>
     </tr>`).join('');
-  $('jobQueueCount').textContent = `${jobs.length} queued job${jobs.length === 1 ? '' : 's'}`;
-  $('admitJobs').disabled = jobs.length === 0;
+  const totalQueued = jobs.length + pendingPrograms.length;
+  $('jobQueueCount').textContent = `${totalQueued} queued job${totalQueued === 1 ? '' : 's'}`;
   window.lucide?.createIcons?.();
 }
 
@@ -1430,6 +1437,7 @@ $('addJob').addEventListener('click', () => {
   jobs.push({ id: `J${number}`, arrival, burst, priority, deadline });
   addLog(`Queued job J${number}`);
   renderJobQueue();
+  admitJobsToCpu();
   persist();
 });
 $('generateJobs')?.addEventListener('click', () => {
@@ -1457,6 +1465,7 @@ $('generateJobs')?.addEventListener('click', () => {
   $('jobSchedulerStatus').textContent = `Generated ${count} jobs (uniform arrivals, bursts 1-8).`;
   addLog(`Generated ${count} jobs (uniform workload)`);
   renderJobQueue();
+  admitJobsToCpu();
   persist();
 });
 
@@ -1490,11 +1499,11 @@ $('jobTable').addEventListener('click', event => {
 });
 $('jobPolicy').addEventListener('change', () => {
   renderJobQueue();
+  admitJobsToCpu();
   persist();
 });
-$('jobAdmissionTime').addEventListener('change', persist);
-$('jobCapacity').addEventListener('change', persist);
-$('admitJobs').addEventListener('click', admitJobsToCpu);
+$('jobAdmissionTime').addEventListener('change', () => { admitJobsToCpu(); persist(); });
+$('jobCapacity').addEventListener('change', () => { admitJobsToCpu(); persist(); });
 
 // Run / Reset
 const ganttCanvas = $('ganttCanvas');
@@ -1673,17 +1682,13 @@ function selectProgramFiles(fileList) {
     ? `${selectedProgramFiles.length} file${selectedProgramFiles.length === 1 ? '' : 's'} ready${skipped ? `; skipped ${skipped} unsupported, oversized, or excess file${skipped === 1 ? '' : 's'}` : ''}.`
     : 'Drop or choose .py, .c, .cc, .cpp, or .cxx files up to 256 KB each.';
   if (selectedProgramFiles.length) {
-    processes = [];
     status.textContent = `${selectedProgramFiles.length} source file${selectedProgramFiles.length === 1 ? '' : 's'} ready. Press Gantt Play to run and measure ${selectedProgramFiles.length === 1 ? 'it' : 'them'}.${skipped ? ` Skipped ${skipped} unsupported, oversized, or excess file${skipped === 1 ? '' : 's'}.` : ''}`;
-    renderTable();
-    updateNavCount();
-    runSim();
   } else {
     restoreProcessQueueAfterProgramFailure();
     status.classList.toggle('error', !selectedProgramFiles.length || skipped > 0);
   }
-  if (selectedProgramFiles.length) $('programRunOutputPanel')?.classList.add('hidden');
-  else $('programRunOutputPanel')?.classList.remove('hidden');
+  renderJobQueue();
+  $('programRunOutputPanel')?.classList.remove('hidden');
 }
 
 programDropzone?.addEventListener('keydown', event => {
@@ -1756,7 +1761,8 @@ async function runSelectedPrograms() {
       if (result.ok) {
         const stem = file.name.slice(0, file.name.lastIndexOf('.'));
         const baseId = stem.normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 36) || 'Program';
-        const usedIds = new Set(completed.map(process => process.id.toLowerCase()));
+        const baseQueue = processQueueBeforeProgramSelection || processes;
+        const usedIds = new Set([...baseQueue, ...completed].map(process => process.id.toLowerCase()));
         let id = baseId;
         let suffix = 2;
         while (usedIds.has(id.toLowerCase())) {
@@ -1784,7 +1790,8 @@ async function runSelectedPrograms() {
     }
 
     if (completed.length) {
-      processes = completed;
+      const baseQueue = processQueueBeforeProgramSelection || processes;
+      processes = [...baseQueue.map(process => ({ ...process })), ...completed];
       processQueueBeforeProgramSelection = null;
       addLog(`Ran ${completed.length} source program${completed.length === 1 ? '' : 's'} and simulated measured bursts`);
       renderTable();
@@ -1794,6 +1801,7 @@ async function runSelectedPrograms() {
     const failed = selectedProgramFiles.length - completed.length;
     programFilesPrepared = completed.length > 0;
     if (!completed.length) restoreProcessQueueAfterProgramFailure();
+    renderJobQueue();
     status.classList.toggle('error', failed > 0 || !completed.length);
     status.textContent = completed.length
       ? `Simulating ${completed.length} program${completed.length === 1 ? '' : 's'}; ${failed} failed. Gantt, WT, and TAT use the measured bursts.`

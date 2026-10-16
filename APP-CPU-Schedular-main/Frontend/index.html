@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f1ea" id="themeColor" />
+  <title>CPU Scheduling Simulator</title>
+  <script>
+    const path = window.location.pathname.split('/').pop();
+    const hash = window.location.hash;
+    const isDemo = new URLSearchParams(window.location.search).get('demo') === '1';
+    if ((!path || path === 'index.html') && !hash && !isDemo) {
+      window.location.replace(localStorage.getItem('authToken') ? 'profile.html' : 'auth.html');
+    }
+    if (new URLSearchParams(window.location.search).get('demo') === '1') document.documentElement.dataset.demo = 'true';
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=config-layout-1" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <a class="skip-link" href="#simulator">Skip to simulator</a>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark"><i data-lucide="cpu"></i></span><span>APP Project</span></div>
+      <div class="side-label">Workspace</div>
+      <nav class="nav-list" aria-label="Main navigation">
+        <a class="nav-item workspace-nav-link" href="workspace.html"><i data-lucide="layout-dashboard"></i><span>Workspace</span></a>
+        <div class="nav-group nav-collapsible"><button class="nav-item nav-group-toggle active" type="button" aria-expanded="false" aria-controls="simulatorSubmenu"><i data-lucide="gauge"></i><span>Simulator</span><i class="nav-chevron" data-lucide="chevron-down"></i></button><div class="nav-sublist" id="simulatorSubmenu"><a class="nav-item" href="#processes"><i data-lucide="list-tree"></i><span>Process Queue</span></a><a class="nav-item" href="#jobs"><i data-lucide="briefcase-business"></i><span>JOB Queue</span></a><a class="nav-item" href="#metrics"><i data-lucide="bar-chart-3"></i><span>Analytics</span></a></div></div>
+        <a class="nav-item" href="logs.html"><i data-lucide="scroll-text"></i><span>System Logs</span></a>
+      </nav>
+      <div class="side-label learn-label">Reference</div>
+      <nav class="nav-list">
+        <a class="nav-item" href="#algorithms"><i data-lucide="book-open"></i><span>Algorithms</span></a>
+        <a class="nav-item" href="#shortcuts"><i data-lucide="keyboard"></i><span>Shortcuts</span></a>
+        <a class="nav-item" href="about.html"><i data-lucide="info"></i><span>About Project</span></a>
+      </nav>
+      <div class="sidebar-time" id="sidebarDateTime"></div>
+      <div class="sidebar-foot">
+        <div class="status-row"><span class="status-dot"></span><span>Engine ready</span></div>
+      </div>
+    </aside>
+
+    <main class="main-content" id="simulator">
+      <header class="topbar">
+        <div class="breadcrumb"><a href="workspace.html">Workspace</a><i data-lucide="chevron-right"></i><strong>CPU simulator</strong><i class="breadcrumb-detail hidden" id="breadcrumbDetailIcon" data-lucide="chevron-right"></i><strong class="breadcrumb-detail hidden" id="breadcrumbDetail"></strong></div>
+        <div class="top-actions">
+          <button class="icon-button" id="themeToggle" title="Switch to dark theme" aria-label="Switch to dark theme" aria-pressed="false"><i data-lucide="moon"></i></button>
+          <button class="icon-button" id="accessibilityToggle" title="Accessibility options" aria-label="Accessibility options" aria-expanded="false" aria-controls="accessibilityPanel">
+            <svg class="accessibility-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+              <circle cx="12" cy="4" r="2.2" />
+              <rect x="4.5" y="8" width="15" height="2.8" rx="1.4" />
+              <rect x="8.5" y="8" width="7" height="6.5" />
+              <rect x="8.5" y="14" width="2.8" height="7.5" rx="1.2" />
+              <rect x="12.7" y="14" width="2.8" height="7.5" rx="1.2" />
+            </svg>
+          </button>
+          <a class="avatar demo-hidden" id="profileToggle" href="profile.html" title="Open profile picker" aria-label="Open profile picker">AK</a>
+        </div>
+      </header>
+
+      <section class="page-intro">
+        <div><p class="eyebrow">ADVANCED PROGRAMMING PRACTISE</p><h1>CPU Scheduling <em>Simulator</em><small class="integrated-heading-label">with Integrated Job Simulator</small></h1><p class="intro-copy">Project By:<br>Aditya Kumar Singh - RA2511028020094<br>Suryanshu Roy - RA2511028020093<br>Musani Likith Reddy - RA2511028020082</p></div>
+      </section>
+
+      <section class="accessibility-panel" id="accessibilityPanel" aria-label="Accessibility options" hidden>
+        <div class="accessibility-heading">TEXT SIZE</div>
+        <div class="accessibility-grid">
+          <button type="button" data-text-size="small">A<sup>-</sup><span>A- Decrease</span></button>
+          <button type="button" class="selected" data-text-size="normal">A<span>Normal (100%)</span></button>
+          <button type="button" data-text-size="large">A<sup>+</sup><span>A+ Increase</span></button>
+        </div>
+        <div class="accessibility-heading">ZOOM</div>
+        <div class="zoom-controls">
+          <span>Zoom</span>
+          <button type="button" data-zoom="decrease" aria-label="Decrease zoom">-</button>
+          <strong id="zoomValue" aria-live="polite">100%</strong>
+          <button type="button" data-zoom="increase" aria-label="Increase zoom">+</button>
+        </div>
+        <div class="accessibility-heading">CONTRAST</div>
+        <div class="accessibility-grid contrast-grid">
+          <button type="button" class="selected" data-contrast="normal">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>
+            <span>Normal</span>
+          </button>
+          <button type="button" data-contrast="high">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0 0 18V3z"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span>High Contrast</span>
+          </button>
+        </div>
+        <button type="button" class="accessibility-reset" id="accessibilityReset">Reset all</button>
+      </section>
+      <section class="profile-panel" id="profilePanel" aria-label="Profile options" hidden>
+        <div class="profile-summary">
+          <span class="profile-badge" id="profileBadge">AK</span>
+          <div><strong id="profileName">AK</strong><small id="profileRole">Project user</small></div>
+        </div>
+        <div class="profile-actions">
+          <button type="button" class="profile-option" id="profileChange"><i data-lucide="users-round"></i> Change profile</button>
+          <button type="button" class="profile-option" id="profileRename"><i data-lucide="user-pen"></i> Rename profile</button>
+          <div class="profile-picture-option">
+            <button type="button" class="profile-option" id="profilePictureToggle" aria-haspopup="true" aria-expanded="false" aria-controls="profilePictureSubmenu"><i data-lucide="user-round-pen"></i> Customise Profile<i class="profile-picture-chevron" data-lucide="chevron-down"></i></button>
+            <div class="profile-picture-submenu" id="profilePictureSubmenu" aria-label="Profile picture options">
+              <button type="button" class="profile-option" id="profileAddPhoto"><i data-lucide="image-plus"></i> Add photo</button>
+              <button type="button" class="profile-option" id="profileRemovePhoto"><i data-lucide="image-off"></i> Remove photo</button>
+            </div>
+            <input type="file" id="profilePhotoInput" accept="image/*" hidden />
+          </div>
+        </div>
+        <div id="profileStatus" class="profile-status" aria-live="polite"></div>
+      </section>
+      <section class="config-panel" aria-labelledby="configTitle">
+        <div class="config-heading"><div><h2 id="configTitle"><i data-lucide="settings-2"></i> Scheduler Configuration &amp; Workload</h2><p>Configure algorithm parameters, context switches, and process burst times.</p><span id="presetStatus" class="preset-status" role="status" aria-live="polite"></span></div><div class="preset-control"><label for="preset">Preset:</label><div class="select-wrap"><select id="preset" aria-label="Select benchmark preset"><option value="custom">Select Benchmark Preset...</option><option value="balanced">Balanced workload</option><option value="burst-heavy">Burst-heavy workload</option><option value="interactive">Interactive workload</option></select><i data-lucide="chevrons-up-down"></i></div></div></div>
+        <div class="config-grid">
+          <div class="config-field"><label for="algorithm">Scheduling algorithm</label><div class="select-wrap"><select id="algorithm"><option value="fcfs">First Come, First Served (FCFS)</option><option value="sjf">Shortest Job First (SJF)</option><option value="srtf">Shortest Remaining Time First (SRTF)</option><option value="rr">Round Robin (RR)</option><option value="priority_np">Priority (Non-Preemptive)</option><option value="priority_p">Priority (Preemptive)</option><option value="mlfq">Multi-Level Feedback Queue (MLFQ)</option><option value="edf">Earliest Deadline First (EDF)</option><option value="cfs">Completely Fair Scheduler (CFS)</option></select><i data-lucide="chevrons-up-down"></i></div></div>
+          <div class="config-field quantum-control hidden"><label for="quantum">Time quantum (Q) <span class="active-tag">Active</span></label><div class="input-wrap"><input id="quantum" type="number" min="1" max="20" value="2" /><span>units</span></div></div>
+          <div class="config-field"><label for="contextSwitch">Context switch (t_cs) <span class="field-note">Overhead</span></label><div class="input-wrap"><input id="contextSwitch" type="number" min="0" max="20" value="0" /><span>units</span></div></div>
+          <div class="config-field priority-control"><label for="priorityConvention">Priority convention</label><div class="select-wrap"><select id="priorityConvention"><option value="lower">Lower number = higher priority</option><option value="higher">Higher number = higher priority</option></select><i data-lucide="chevrons-up-down"></i></div></div>
+          <div class="config-field mlfqConfig hidden"><label>MLFQ quanta</label><div class="mlfq-quanta"><input class="mlfq-q-val" type="number" min="1" value="2" aria-label="MLFQ level 0 quantum"><input class="mlfq-q-val" type="number" min="1" value="4" aria-label="MLFQ level 1 quantum"><input class="mlfq-q-val" type="number" min="1" value="8" aria-label="MLFQ level 2 quantum"></div></div>
+        </div>
+      </section>
+
+      <section class="control-grid" aria-label="Simulation controls">
+        <div class="control-block workload-tools"><label>Workload tools</label><div class="tool-buttons"><button class="secondary-button text-button" id="importButton"><i data-lucide="upload"></i> Import</button><input id="workloadFile" type="file" accept=".json,.csv,application/json,text/csv" hidden><button class="secondary-button text-button" id="generateBtn"><i data-lucide="dice-5"></i> Generate</button><button class="secondary-button text-button" id="exportJSON"><i data-lucide="download"></i> JSON</button><button class="secondary-button text-button" id="exportCSV"><i data-lucide="download"></i> CSV</button></div></div>
+      </section>
+
+      <section class="workspace-grid" id="processes">
+        <div class="panel process-panel"><div class="panel-heading"><div><p class="panel-kicker">INPUT</p><div class="title-with-info"><h2>Process queue</h2><details class="title-info"><summary aria-label="Show process definition"><i data-lucide="chevron-down"></i></summary><span class="title-definition">A process is an admitted job ready for CPU scheduling. The CPU scheduler selects it to run and tracks its execution state and performance.</span></details></div></div></div><div class="process-import-control program-run-control"><label id="programDropzone" for="programFilesInput" class="program-dropzone" tabindex="0"><span>Drop source files here or click to browse</span><small>Python, C, or C++ · Up to 10 files, 256 KB each. Browse again to add more.</small><input id="programFilesInput" class="program-file-input" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0" type="file" accept=".py,.c,.cc,.cpp,.cxx" multiple tabindex="-1"><ul id="programFileList" class="program-file-list"></ul></label><p>Click the green Gantt play button to run selected files and simulate their measured runtimes. Execution stops after 5 seconds per file.</p><span id="programFilesStatus" role="status" aria-live="polite"></span></div><div class="table-wrap"><table><thead><tr><th>Color</th><th>Process name</th><th>Arrival time</th><th>Burst time</th><th>Priority</th><th class="deadline-header hidden">Deadline</th><th>State</th><th>Actions</th></tr></thead><tbody id="processTable"></tbody></table></div><div class="table-foot"><span id="processCount">5 processes</span><span class="workload-summary">Total workload burst: <strong id="workloadTotal">0 units</strong></span></div></div>
+        <div class="process-side-stack"><div class="panel info-panel" id="algorithms"><div class="panel-heading"><div><p class="panel-kicker">ALGORITHM NOTE</p><h2 id="algorithmTitle">FCFS</h2></div><span class="tag" id="algorithmTag">NON-PREEMPTIVE</span></div><p id="algorithmDescription">Processes are executed in the order they arrive. Simple, predictable, and a good baseline for comparing other strategies.</p><div class="formula"><span>Next process</span><strong id="formulaText">min(arrival time)</strong></div><a href="#" class="text-link">View algorithm details <i data-lucide="arrow-up-right"></i></a></div><div id="programRunOutputPanel" class="program-terminal" aria-live="polite"><div class="terminal-titlebar"><div class="terminal-tab"><i class="terminal-app-icon" data-lucide="terminal" aria-hidden="true"></i><span>Terminal</span></div><div class="terminal-window-actions" aria-hidden="true"><span>−</span><span>□</span><span>×</span></div></div><div class="terminal-screen"><strong id="programRunTitle" class="terminal-heading">Process completion order</strong><div class="terminal-command-line"><label class="terminal-prompt" for="terminalCommand">C:\CPU-Scheduler&gt;</label><input id="terminalCommand" type="text" autocomplete="off" spellcheck="false" aria-label="Terminal keyboard controls"></div><pre id="programRunOutput" role="log" aria-live="polite">Press Enter to start scheduling. Press any other key to stop.</pre></div></div></div>
+      </section>
+
+      <section class="panel job-scheduler-panel" id="jobs" aria-labelledby="jobSchedulerTitle">
+        <div class="panel-heading job-scheduler-heading">
+          <div><p class="panel-kicker">LONG-TERM SCHEDULER</p><div class="title-with-info"><h2 id="jobSchedulerTitle">Job scheduler</h2><details class="title-info"><summary aria-label="Show job definition"><i data-lucide="chevron-down"></i></summary><span class="title-definition">A job is submitted work waiting for admission. Its arrival time controls eligibility; the admission policy decides which eligible jobs enter the CPU queue.</span></details></div><p class="job-scheduler-description">Queue incoming jobs, then admit them to the CPU process queue.</p></div>
+          <div class="job-policy-control"><label for="jobPolicy">Admission policy</label><div class="select-wrap"><select id="jobPolicy"><option value="fcfs">First Come, First Served</option><option value="sjf">Shortest Job First</option><option value="priority">Priority</option><option value="edf">Earliest Deadline First</option></select><i data-lucide="chevrons-up-down"></i></div></div>
+        </div>
+        <div class="job-entry-controls">
+          <label>Arrival time<input id="jobArrival" type="number" min="0" value="0" /></label>
+          <label>CPU burst<input id="jobBurst" type="number" min="1" value="3" /></label>
+          <label>Priority<input id="jobPriority" type="number" min="1" value="2" /></label>
+          <label>Deadline<input id="jobDeadline" type="number" min="1" value="10" /></label>
+          <label>Number of jobs<input id="jobGenerateCount" type="number" min="1" max="20" value="5" /></label>
+          <button class="add-button" id="addJob" type="button"><i data-lucide="plus"></i> Add job</button>
+          <button class="add-button generate-jobs-button" id="generateJobs" type="button"><i data-lucide="dice-5"></i> Generate jobs</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Job</th><th>Arrival</th><th>CPU burst</th><th>Priority</th><th>Deadline</th><th>Actions</th></tr></thead><tbody id="jobTable"></tbody></table></div>
+        <div class="job-scheduler-footer"><span id="jobQueueCount">0 queued jobs</span><label>Admission time<input id="jobAdmissionTime" type="number" min="0" value="0" /></label><label>Batch capacity<input id="jobCapacity" type="number" min="1" max="20" value="5" /></label><span id="jobSchedulerStatus" role="status" aria-live="polite"></span><button class="primary-button" id="admitJobs" type="button" disabled><i data-lucide="log-in"></i> Admit jobs to CPU queue</button></div>
+      </section>
+
+      <section class="panel monitor-panel dev-monitor" aria-labelledby="monitorTitle">
+        <div class="panel-heading">
+          <div><p class="panel-kicker">RUNTIME STREAM <span class="monitor-source">/ CPU-01</span></p><h2 id="monitorTitle">Process State Queue</h2></div>
+          <div class="monitor-readout"><div class="monitor-clock"><span>SIM_CLOCK</span><strong class="mono" id="simClock" aria-live="polite">t = —</strong></div></div>
+        </div>
+        <div class="monitor-grid">
+          <div><span class="monitor-label"><span class="monitor-index">01</span> RUNNING PROCESS</span><div id="runningProcess"><span class="queue-empty">— idle —</span></div></div>
+          <div><span class="monitor-label"><span class="monitor-index">02</span> PROCESS STATE QUEUE</span><div id="readyQueueMonitor"><span class="queue-empty">Run a simulation</span></div></div>
+        </div>
+      </section>
+      <section class="panel pipeline-panel" aria-labelledby="pipelineTitle">
+        <div class="panel-heading"><div><p class="panel-kicker">CPU PIPELINE</p><h2 id="pipelineTitle">Instruction flow</h2></div><div class="pipeline-readouts"><span class="mono" id="pipelineClock">t = —</span><span class="mono program-counter-readout" id="programCounterReadout">PC: —</span></div></div>
+        <div class="pipeline-stages" id="pipelineStages" aria-live="polite">
+          <div class="pipeline-stage"><span>FETCH</span><strong>—</strong></div>
+          <div class="pipeline-stage"><span>DECODE</span><strong>—</strong></div>
+          <div class="pipeline-stage active"><span>EXECUTE</span><strong>Run a simulation</strong></div>
+        </div>
+        <div class="pipeline-window-label">SLIDING EXECUTION WINDOW</div>
+        <div class="pipeline-window" id="pipelineWindow" aria-live="polite"><span class="queue-empty">Run a simulation to populate the pipeline.</span></div>
+      </section>
+      <section class="panel timeline-panel" id="ganttSection" aria-labelledby="ganttTitle">
+        <div class="panel-heading timeline-heading">
+          <div>
+            <p class="panel-kicker">OUTPUT - GANTT CHART</p>
+            <h2 id="ganttTitle">Job &amp; Process Scheduling Timeline</h2>
+            <p class="gantt-subtitle">Visualizes Long-Term Job Admission and Short-Term CPU Scheduling with synchronized time alignment.</p>
+          </div>
+          <div class="timeline-meta">
+            <div class="gantt-view-switch" role="tablist" aria-label="Gantt chart views">
+              <button type="button" class="view-tab active" id="viewTabDual" data-view="dual" role="tab" aria-selected="true" title="Unified view: Job admission & CPU execution">Unified (Dual-Tier)</button>
+              <button type="button" class="view-tab" id="viewTabCpu" data-view="cpu" role="tab" aria-selected="false" title="Classic CPU execution Gantt chart">CPU Execution</button>
+              <button type="button" class="view-tab" id="viewTabSwim" data-view="swimlane" role="tab" aria-selected="false" title="Per-process & job lifecycle swimlanes">Process Swimlanes</button>
+            </div>
+            <div class="gantt-scale-control">
+              <label for="ganttScale">Scale:</label>
+              <select id="ganttScale" aria-label="Timeline scaling">
+                <option value="fit">Fit to width</option>
+                <option value="normal" selected>Normal (36px/u)</option>
+                <option value="expanded">Expanded (52px/u)</option>
+              </select>
+            </div>
+            <span class="mono" id="stepProgress">—</span>
+            <span class="mono" id="totalTime">0 units</span>
+          </div>
+          <div class="timeline-reset-row"><button class="reset-schedulers-button" id="resetSchedulers" type="button" title="Clear all short-term processes and long-term jobs"><i data-lucide="rotate-ccw"></i> Reset schedulers</button></div>
+        </div>
+
+        <div class="gantt-legend" aria-label="Gantt chart legend">
+          <span class="gantt-legend-item"><span class="legend-swatch cpu-swatch"></span> CPU Execution</span>
+          <span class="gantt-legend-item"><span class="legend-swatch cs-swatch"></span> Context Switch (CS)</span>
+          <span class="gantt-legend-item"><span class="legend-swatch idle-swatch"></span> CPU Idle</span>
+          <span class="gantt-legend-item"><span class="legend-swatch ready-swatch"></span> Ready Queue Wait</span>
+          <span class="gantt-legend-item"><span class="legend-swatch job-swatch"></span> Job Pool (Unadmitted)</span>
+          <span class="gantt-legend-item"><span class="legend-swatch deadline-swatch"></span> Deadline Marker</span>
+        </div>
+
+        <div class="timeline-scroll" id="timelineScroll">
+          <div class="gantt-canvas" id="ganttCanvas">
+            <!-- Playhead cursor line across tracks -->
+            <div class="gantt-playhead hidden" id="ganttPlayhead">
+              <div class="gantt-playhead-pill" id="ganttPlayheadPill">t = 0</div>
+              <div class="gantt-playhead-line"></div>
+            </div>
+
+            <!-- Track 1: Job Scheduler (Long-Term) -->
+            <div class="gantt-track-wrapper" id="jobTrackWrapper">
+              <div class="gantt-track-header">
+                <span class="track-tag job-tag">LONG-TERM SCHEDULER</span>
+                <span class="track-title">Job Admission &amp; Spooling Track</span>
+                <span class="track-sub" id="jobTrackCount">0 jobs</span>
+              </div>
+              <div class="gantt-track" id="jobTimeline"></div>
+            </div>
+
+            <!-- Track 2: CPU Scheduler (Short-Term) -->
+            <div class="gantt-track-wrapper" id="cpuTrackWrapper">
+              <div class="gantt-track-header">
+                <span class="track-tag cpu-tag">SHORT-TERM SCHEDULER</span>
+                <span class="track-title">CPU Execution Timeline (Gantt)</span>
+                <span class="track-sub" id="cpuTrackMeta">Active Core</span>
+              </div>
+              <div class="gantt-track timeline" id="timeline"></div>
+            </div>
+
+            <!-- Track 3: Swimlanes (Per-Process Lifecycle Matrix) -->
+            <div class="gantt-track-wrapper hidden" id="swimlaneTrackWrapper">
+              <div class="gantt-track-header">
+                <span class="track-tag matrix-tag">LIFECYCLE MATRIX</span>
+                <span class="track-title">Per-Process &amp; Job State Transitions</span>
+                <span class="track-sub">Arrival → Ready → Run → Terminate</span>
+              </div>
+              <div class="gantt-swimlanes" id="ganttSwimlanes"></div>
+            </div>
+
+            <!-- Synchronized Time Axis (inside scroll container) -->
+            <div class="timeline-axis-wrap">
+              <div class="timeline-axis" id="timelineAxis"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gantt-tooltip hidden" id="ganttTooltip" role="tooltip"></div>
+
+        <div class="playback-controls">
+          <button class="secondary-button" id="stepResetBtn" title="Reset playback"><i data-lucide="skip-back"></i></button>
+          <button class="secondary-button" id="stepBwdBtn" title="Previous tick"><i data-lucide="chevron-left"></i></button>
+          <button class="secondary-button" id="playBtn" title="Play" aria-label="Play simulation"><i data-lucide="play"></i></button>
+          <button class="secondary-button hidden" id="pauseBtn" title="Pause" aria-label="Pause simulation"><i data-lucide="pause"></i></button>
+          <button class="secondary-button" id="stepFwdBtn" title="Next tick"><i data-lucide="chevron-right"></i></button>
+          <label class="speed-control">Speed <input id="speedSlider" type="range" min="0.5" max="3" step="0.5" value="1"><span id="speedLabel">1×</span></label>
+          <div class="gantt-seek-wrap">
+            <label for="ganttSeekInput">Seek:</label>
+            <input id="ganttSeekInput" type="number" min="0" value="0">
+            <button class="secondary-button text-button" id="ganttSeekBtn" type="button">Go</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-grid" id="metrics"><div class="metric-card accent"><span class="metric-label">Average waiting time</span><strong id="avgWaiting">0.00 <small>units</small></strong><span class="metric-trend" id="waitingTrend">Run a simulation to calculate</span></div><div class="metric-card"><span class="metric-label">Average turnaround</span><strong id="avgTurnaround">0.00 <small>units</small></strong><span class="metric-trend neutral">Arrival → completion</span></div><div class="metric-card"><span class="metric-label">Average response</span><strong id="avgResponse">0.00 <small>units</small></strong><span class="metric-trend neutral">Arrival → first CPU tick</span></div><div class="metric-card"><span class="metric-label">CPU utilization</span><strong id="utilization">0.0<small>%</small></strong><span class="metric-trend neutral">Active execution time</span></div><div class="metric-card"><span class="metric-label">Throughput</span><strong id="throughput">0.00 <small>p/u</small></strong><span class="metric-trend neutral">Processes per unit</span></div></section>
+      <section class="panel metrics-panel"><div class="panel-heading"><div><p class="panel-kicker">PROCESS METRICS</p><h2>Completion breakdown</h2></div><button class="add-button" id="compareBtn"><i data-lucide="columns-3"></i> Compare algorithms</button></div><div class="table-wrap"><table><thead><tr><th>PID</th><th>AT</th><th>BT</th><th>Priority</th><th>CT</th><th>TAT</th><th>WT</th><th>RT</th><th>Deadline</th></tr></thead><tbody id="processMetricsBody"></tbody></table></div></section>
+      <section class="panel comparison-panel hidden" id="comparisonSection"><div class="panel-heading"><div><p class="panel-kicker">COMPARISON MODE</p><h2>Algorithm benchmark</h2></div><button class="secondary-button" id="closeCompare" title="Close comparison"><i data-lucide="x"></i></button></div><div id="comparisonPanel"></div></section>
+      <section class="panel shortcuts-panel" id="shortcuts" aria-labelledby="shortcutsTitle">
+        <div class="panel-heading"><div><p class="panel-kicker">QUICK REFERENCE</p><h2 id="shortcutsTitle">Keyboard shortcuts</h2></div><i data-lucide="keyboard" aria-hidden="true"></i></div>
+        <div class="shortcuts-grid">
+          <div class="shortcut-row"><span>Play or pause playback</span><kbd>Space</kbd></div>
+          <div class="shortcut-row"><span>Previous tick</span><kbd>←</kbd></div>
+          <div class="shortcut-row"><span>Next tick</span><kbd>→</kbd></div>
+        </div>
+      </section>
+      <footer class="footer">
+        <span class="footer-part footer-left">Dept: BTECH CSE with specialisation in<br>Cloud Computing (Section B)</span>
+        <span class="footer-part footer-center">Year: 2 / Sem: 3<br>Academic Year: 2026-27<br>Advanced Programming Practise | 21CSC203P</span>
+        <span class="footer-part footer-right">SRM INSTITUTE OF SCIENCE AND TECHNOLOGY RAMAPURAM</span>
+      </footer>
+    </main>
+  </div>
+  <script src="accessibility.js?v=profile-isolation-1"></script>
+  <script src="api.js"></script>
+  <script src="profile.js?v=profile-isolation-1"></script>
+  <script src="app.js?v=profile-isolation-1"></script>
+  <script>
+    if (document.documentElement.dataset.demo === 'true') {
+      document.querySelectorAll('.workspace-nav-link, #profileToggle, .breadcrumb a[href="workspace.html"], .program-run-control').forEach(element => element.remove());
+      document.body.classList.add('demo-mode');
+    }
+  </script>
+  <script>
+    document.querySelector('.nav-group-toggle')?.addEventListener('click', event => {
+      const toggle = event.currentTarget;
+      const group = toggle.closest('.nav-collapsible');
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      group?.classList.toggle('is-open', !expanded);
+    });
+    window.lucide?.createIcons?.();
+  </script>
+</body>
+</html>
