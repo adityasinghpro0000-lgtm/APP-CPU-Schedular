@@ -2,45 +2,6 @@
 
 This project is a browser-based CPU scheduling simulator. It models jobs, processes, scheduling algorithms, Gantt timelines, and process metrics. It can also run selected Python, C, and C++ source files locally, measure their runtimes, and use those measurements as simulated process burst times.
 
-## Screenshots
-
-### Sign in
-
-![CPU Scheduling Simulator sign-in page](screenshots/login.png)
-
-### Profiles
-
-![CPU Scheduling Simulator process queue in demo mode](screenshots/Profiles.png)
-
-### Workspace
-
-![CPU Scheduling Simulator workspace](screenshots/workspace.png)
-
-### Simulator demo
-
-![CPU Scheduling Simulator process queue in demo mode](screenshots/simulator.png)
-
-
-### Job scheduler
-
-![CPU Scheduling Simulator job scheduler](screenshots/JobSchedular.png)
-
-### Process queue
-
-![CPU Scheduling Simulator process queue](screenshots/Process%20Queue.png)
-
-### Gantt chart process swimlanes
-
-![CPU Scheduling Simulator Gantt chart with process swimlanes](screenshots/Gantt%20Chart%20Process%20Swimlanes.png)
-
-### Process metrics
-
-![CPU Scheduling Simulator process metrics](screenshots/Process%20Metrics.png)
-
-### Algorithm benchmark
-
-![CPU Scheduling Simulator algorithm benchmark](screenshots/Algorithm%20Benchmark.png)
-
 ## Run the application
 
 Install the Python dependencies and start the FastAPI server:
@@ -120,6 +81,45 @@ Supported extensions:
 | C++ | `.cc`, `.cpp`, `.cxx` | Compiles with `g++`, then runs the resulting executable. |
 
 For each successful program, the simulator converts measured execution time to a burst of `ceil(runtime_ms / 10)` units, clamped to 1–500 units. Compilation time is not included in a successful C or C++ program's measured run time. Each generated process arrives at time 0, uses priority 1, and gets a deadline 10 units after its burst. Failed programs are reported and are not added to the process queue. If none run successfully, the previous process queue is restored.
+
+## Screenshots
+
+### Sign in
+
+![CPU Scheduling Simulator sign-in page](screenshots/login.png)
+
+### Profiles
+
+![CPU Scheduling Simulator process queue in demo mode](screenshots/Profiles.png)
+
+### Workspace
+
+![CPU Scheduling Simulator workspace](screenshots/workspace.png)
+
+### Simulator demo
+
+![CPU Scheduling Simulator process queue in demo mode](screenshots/simulator.png)
+
+
+### Job scheduler
+
+![CPU Scheduling Simulator job scheduler](screenshots/JobSchedular.png)
+
+### Process queue
+
+![CPU Scheduling Simulator process queue](screenshots/Process%20Queue.png)
+
+### Gantt chart process swimlanes
+
+![CPU Scheduling Simulator Gantt chart with process swimlanes](screenshots/Gantt%20Chart%20Process%20Swimlanes.png)
+
+### Process metrics
+
+![CPU Scheduling Simulator process metrics](screenshots/Process%20Metrics.png)
+
+### Algorithm benchmark
+
+![CPU Scheduling Simulator algorithm benchmark](screenshots/Algorithm%20Benchmark.png)
 
 ### Program runner limits
 
