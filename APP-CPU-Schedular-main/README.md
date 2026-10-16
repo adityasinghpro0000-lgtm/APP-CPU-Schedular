@@ -12,6 +12,30 @@ This project is a browser-based CPU scheduling simulator. It models jobs, proces
 
 ![CPU Scheduling Simulator process queue in demo mode](screenshots/simulator.png)
 
+### Workspace
+
+![CPU Scheduling Simulator workspace](screenshots/workspace.png)
+
+### Job scheduler
+
+![CPU Scheduling Simulator job scheduler](screenshots/JobSchedular.png)
+
+### Process queue
+
+![CPU Scheduling Simulator process queue](screenshots/Process%20Queue.png)
+
+### Gantt chart process swimlanes
+
+![CPU Scheduling Simulator Gantt chart with process swimlanes](screenshots/Gantt%20Chart%20Process%20Swimlanes.png)
+
+### Process metrics
+
+![CPU Scheduling Simulator process metrics](screenshots/Process%20Metrics.png)
+
+### Algorithm benchmark
+
+![CPU Scheduling Simulator algorithm benchmark](screenshots/Algorithm%20Benchmark.png)
+
 ## Run the application
 
 Install the Python dependencies and start the FastAPI server:
